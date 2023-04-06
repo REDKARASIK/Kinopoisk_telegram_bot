@@ -1,0 +1,2 @@
+BOT_TOKEN = ''
+KEY_APY = ''
