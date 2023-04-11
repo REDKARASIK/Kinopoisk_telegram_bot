@@ -2,7 +2,7 @@ import logging
 from pprint import pprint
 
 import aiohttp
-import telegram.error
+from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import API_KEY
@@ -44,7 +44,7 @@ async def button(update, context):
         if query.data == 'random':
             await random(query, context)
             await query.delete_message()
-        if query.data == 'delete_random':
+        if query.data == 'start':
             await start(update, context)
 
     else:
@@ -73,36 +73,64 @@ async def random(query, context):
     uri = 'https://api.kinopoisk.dev/v1/movie/random'
     response = await get_response(uri, headers={'X-API-KEY': API_KEY})
     pprint(response)
-    text, img = parser_film(response)
+    text, img, url_trailer, url_sources = parser_film(response)
     chat_id = context.user_data['chat_id']
-    keyboard = [[InlineKeyboardButton('Назад', callback_data='delete_random')]]
+    print(url_sources)
+    keyboard = [[InlineKeyboardButton('Назад', callback_data='start')]]
+    keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
+    keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in url_sources.items()],
+                keyboard[0]] if url_sources else keyboard
+    print(keyboard)
     markup = InlineKeyboardMarkup(keyboard)
-    try:
-        await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup)
-    except telegram.error.BadRequest as e:
-        await context.bot.send_photo(chat_id, img['url'], caption=''.join(text.split()[:50]), reply_markup=markup)
+    await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup,
+                                 parse_mode=types.ParseMode.HTML)
 
 
 def parser_film(response):
     alt_name = response['alternativeName']
     name = response['name']
     description = response['description']
-    # years = '-'.join([response['releaseYears'][0]['start'], response['releaseYears'][0]['end']])
+    year = response.get('year', '')
     age_rate = response['ageRating']
     genre = ', '.join(map(lambda x: x['name'], response['genres'][:5]))
     poster = response['poster']
     rate_imdb, rate_kp = response['rating']['imdb'], response['rating']['kp']
-    persons = response['persons'][:5] if len(response['persons']) >= 5 else response['persons'][
-                                                                            :len(response['persons'])]
-    persons = [x['name'] if x['name'] is not None else x['enName'] for x in persons]
-    persons = ', '.join(persons)
-    text = f"""{name} {f'({alt_name})' if alt_name is not None else ''} {str(age_rate) + '+' if age_rate else ''}
-                жанр: {genre}
-                IMDb: {rate_imdb}, Кинопоиск: {rate_kp}
-                актёры: {persons}\n
-                {description}
-                """
-    return text, poster
+    video = response.get('videos', '')
+    trailer = video.get('trailers', '') if video else ''
+    url_trailer = trailer[0].get('url', '') if trailer else ''
+    watchability = response['watchability']['items']
+    sources = {}
+    if watchability:
+        for source in watchability:
+            sources[source['name']] = source['url']
+    persons = parser_person(response['persons'])
+    persons_text = ''
+    if rate_imdb and rate_imdb > 7:
+        for k, v in persons.items():
+            if len(v): persons_text += f"<strong>{k}</strong>: {', '.join(v)}\n"
+    else:
+        if persons['Режиссеры']: persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
+        if persons['Актеры']: persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
+
+    text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong> {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} <strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
+           f"<strong>жанр:</strong> {genre}\n" \
+           f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
+           f"{persons_text}\n" \
+           f"{description if description else ''}"
+    if len(text) > 4096: text = '\n'.join(text.split('\n')[:-1])
+    return text, poster, url_trailer, sources
+
+
+def parser_person(response):
+    if not response:
+        return ''
+    persons = {'Режиссеры': [], 'Продюсеры': [], 'Композиторы': [], 'Актеры': []}
+    for data in response:
+        if data['profession'].capitalize() in persons:
+            persons[data['profession'].capitalize()].append(
+                data['name'] if data['name'] is not None else data['enName'])
+    persons['Актеры'] = persons['Актеры'] if len(persons['Актеры']) < 10 else persons['Актеры'][:10]
+    return persons
 
 
 async def search_by_name(query, context):
