@@ -2,6 +2,7 @@ import logging
 from pprint import pprint
 
 import aiohttp
+import telegram.error
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import API_KEY
@@ -14,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 async def start(update, context):
+    if 'chat_id' not in context.user_data:
+        context.user_data['chat_id'] = update.message.chat_id
     keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
                  InlineKeyboardButton("Оценки фильмов", callback_data='assessments')],
                 [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
@@ -23,8 +26,9 @@ async def start(update, context):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.", reply_markup=reply_markup)
+    await context.bot.send_message(text=
+                                   "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
+                                   chat_id=context.user_data['chat_id'], reply_markup=reply_markup)
 
 
 async def button(update, context):
@@ -37,6 +41,12 @@ async def button(update, context):
             await search_film(query, context)
         if query.data == 'search_by_name':
             await search_by_name(query, context)
+        if query.data == 'random':
+            await random(query, context)
+            await query.delete_message()
+        if query.data == 'delete_random':
+            await start(update, context)
+
     else:
         if 'query_data' in context.user_data:
             print(update.message.text, context.user_data['query_data'])
@@ -51,6 +61,7 @@ async def search_film(query, context):
     markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text('Вы можете найти фильмы, по заданным вами параметрам.', reply_markup=markup)
 
+
 async def get_response(url, params={}, headers={}):
     logger.info(f"getting {url}")
     async with aiohttp.ClientSession() as session:
@@ -58,13 +69,18 @@ async def get_response(url, params={}, headers={}):
             return await resp.json()
 
 
-async def random(query, context, chat_id):
+async def random(query, context):
     uri = 'https://api.kinopoisk.dev/v1/movie/random'
     response = await get_response(uri, headers={'X-API-KEY': API_KEY})
     pprint(response)
     text, img = parser_film(response)
-    await context.bot.send_photo(chat_id, img, caption=text)
-
+    chat_id = context.user_data['chat_id']
+    keyboard = [[InlineKeyboardButton('Назад', callback_data='delete_random')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    try:
+        await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup)
+    except telegram.error.BadRequest as e:
+        await context.bot.send_photo(chat_id, img['url'], caption=''.join(text.split()[:50]), reply_markup=markup)
 
 
 def parser_film(response):
@@ -76,16 +92,18 @@ def parser_film(response):
     genre = ', '.join(map(lambda x: x['name'], response['genres'][:5]))
     poster = response['poster']
     rate_imdb, rate_kp = response['rating']['imdb'], response['rating']['kp']
-    persons = response['persons'][:5] if len(response['persons']) >= 5 else response['persons'][:len(response['persons'])]
+    persons = response['persons'][:5] if len(response['persons']) >= 5 else response['persons'][
+                                                                            :len(response['persons'])]
     persons = [x['name'] if x['name'] is not None else x['enName'] for x in persons]
     persons = ', '.join(persons)
     text = f"""{name} {f'({alt_name})' if alt_name is not None else ''} {str(age_rate) + '+' if age_rate else ''}
                 жанр: {genre}
                 IMDb: {rate_imdb}, Кинопоиск: {rate_kp}
                 актёры: {persons}\n
-                описание: {description}
+                {description}
                 """
     return text, poster
+
 
 async def search_by_name(query, context):
     keyboard = [[InlineKeyboardButton('Назад', callback_data='search')]]
