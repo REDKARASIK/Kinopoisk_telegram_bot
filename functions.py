@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 async def start(update, context):
-    context.params = {'chat_id': update.message.chat_id}
     keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
                  InlineKeyboardButton("Оценки фильмов", callback_data='assessments')],
                 [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
@@ -24,19 +23,33 @@ async def start(update, context):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("HELLO", reply_markup=reply_markup)
+    await update.message.reply_text(
+        "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.", reply_markup=reply_markup)
 
 
 async def button(update, context):
-    chat_id = context.params['chat_id']
-    query = update.callback_query
-    await query.answer()
-    dt = query.data
-    if dt == 'random':
-        await random(query, context, chat_id)
-        return 0
-    await query.edit_message_text(f"Вы нажали {query.data}")
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        print(query.data)
+        context.user_data['query_data'] = query.data
+        if query.data == 'search':
+            await search_film(query, context)
+        if query.data == 'search_by_name':
+            await search_by_name(query, context)
+    else:
+        if 'query_data' in context.user_data:
+            print(update.message.text, context.user_data['query_data'])
 
+
+async def search_film(query, context):
+    keyboard = [[InlineKeyboardButton('По названию', callback_data='search_by_name'),
+                 InlineKeyboardButton('По актёру', callback_data='search_by_actor')],
+                [InlineKeyboardButton('По режиссёру', callback_data='search_by_director'),
+                 InlineKeyboardButton('По жанру', callback_data='search_by_genre')],
+                [InlineKeyboardButton('Назад', callback_data='start')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text('Вы можете найти фильмы, по заданным вами параметрам.', reply_markup=markup)
 
 async def get_response(url, params={}, headers={}):
     logger.info(f"getting {url}")
@@ -73,3 +86,8 @@ def parser_film(response):
                 описание: {description}
                 """
     return text, poster
+
+async def search_by_name(query, context):
+    keyboard = [[InlineKeyboardButton('Назад', callback_data='search')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text('Напишите название фильма', reply_markup=markup)
