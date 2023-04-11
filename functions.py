@@ -42,14 +42,18 @@ async def button(update, context):
         if query.data == 'search_by_name':
             await search_by_name(query, context)
         if query.data == 'random':
-            await random(query, context)
+            await random(context, 'https://api.kinopoisk.dev/v1/movie/random')
             await query.delete_message()
         if query.data == 'start':
             await start(update, context)
 
     else:
         if 'query_data' in context.user_data:
-            print(update.message.text, context.user_data['query_data'])
+            if context.user_data['query_data'] == 'search_by_name':
+                name = update.message.text
+                del context.user_data['query_data']
+                print(context.user_data)
+                await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name})
 
 
 async def search_film(query, context):
@@ -69,9 +73,8 @@ async def get_response(url, params={}, headers={}):
             return await resp.json()
 
 
-async def random(query, context):
-    uri = 'https://api.kinopoisk.dev/v1/movie/random'
-    response = await get_response(uri, headers={'X-API-KEY': API_KEY})
+async def random(context, url, params=None):
+    response = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
     pprint(response)
     text, img, url_trailer, url_sources = parser_film(response)
     chat_id = context.user_data['chat_id']
