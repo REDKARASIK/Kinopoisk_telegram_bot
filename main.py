@@ -4,7 +4,6 @@ from telegram.ext import Application, MessageHandler, filters, CommandHandler, C
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from config import BOT_TOKEN
 
-
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
@@ -17,6 +16,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, button))
     application.run_polling()
 
 

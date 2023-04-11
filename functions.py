@@ -17,17 +17,31 @@ async def start(update, context):
 
 
 async def button(update, context):
-    query = update.callback_query
-    await query.answer()
-    print(query.data)
-    await query.edit_message_text(f"Вы нажали {query.data}")
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        print(query.data)
+        context.user_data['query_data'] = query.data
+        if query.data == 'search':
+            await search_film(query, context)
+        if query.data == 'search_by_name':
+            await search_by_name(query, context)
+    else:
+        if 'query_data' in context.user_data:
+            print(update.message.text, context.user_data['query_data'])
 
 
-async def search_film(update, context):
-    keyboard = [[InlineKeyboardButton('Поиск фильмов по названию', callback_data='search_by_name'),
-                 InlineKeyboardButton('Поиск фильмов по актёру', callback_data='search_by_actor')],
-                [InlineKeyboardButton('Поиск по фильмов по режиссёру', callback_data='search_by_director'),
-                 InlineKeyboardButton('Поиск фильмов по жанру', callback_data='search_by_genre')],
+async def search_film(query, context):
+    keyboard = [[InlineKeyboardButton('По названию', callback_data='search_by_name'),
+                 InlineKeyboardButton('По актёру', callback_data='search_by_actor')],
+                [InlineKeyboardButton('По режиссёру', callback_data='search_by_director'),
+                 InlineKeyboardButton('По жанру', callback_data='search_by_genre')],
                 [InlineKeyboardButton('Назад', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Вы можете найти фильмы, по заданным вами параметрам.', reply_markup=markup)
+    await query.edit_message_text('Вы можете найти фильмы, по заданным вами параметрам.', reply_markup=markup)
+
+
+async def search_by_name(query, context):
+    keyboard = [[InlineKeyboardButton('Назад', callback_data='search')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text('Напишите название фильма', reply_markup=markup)
