@@ -76,7 +76,8 @@ async def random(query, context):
     text, img, url_trailer, url_sources = parser_film(response)
     chat_id = context.user_data['chat_id']
     print(url_sources)
-    keyboard = [[InlineKeyboardButton('Назад', callback_data='start')]]
+    keyboard = [[InlineKeyboardButton('Рандом', callback_data='random')],
+                [InlineKeyboardButton('Назад', callback_data='start')]]
     keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in url_sources.items()],
                 keyboard[0]] if url_sources else keyboard
@@ -117,7 +118,8 @@ def parser_film(response):
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n" \
            f"{description if description else ''}"
-    if len(text) > 4096: text = '\n'.join(text.split('\n')[:-1])
+    if len(text) > 4096: text = '\n'.join(text.split('\n')[:-1]) if len(
+        '\n'.join(text.split('\n')[:-1])) <= 4096 else '\n'.join(text.split('\n')[:-2])
     return text, poster, url_trailer, sources
 
 
