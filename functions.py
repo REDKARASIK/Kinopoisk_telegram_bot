@@ -6,7 +6,6 @@ from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import API_KEY, API_KEY_2
-from db_functions import *
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
@@ -109,11 +108,13 @@ async def random(context, url, params=None, dlt=False):
                     [InlineKeyboardButton('Назад', callback_data=special_data)]]
     else:
         keyboard = [[InlineKeyboardButton('Другое название', callback_data='search_by_name'),
-                     InlineKeyboardButton('Назад', callback_data=special_data)]]
+                     InlineKeyboardButton('Добавить в посмотреть позже', callback_data='add_to_want_films')],
+                    [InlineKeyboardButton('Назад', callback_data=special_data)]]
 
     keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
-    keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in url_sources.items()],
-                keyboard[0]] if url_sources else keyboard
+    keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
+                url_sources.items()]] + keyboard if url_sources else keyboard
+    print(keyboard)
     markup = InlineKeyboardMarkup(keyboard)
     print(context.user_data['message_type'])
     if context.user_data['message_type'] != 'media':
@@ -233,5 +234,6 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message_type'] = 'text'
     pprint(markup)
-    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img, caption=params['name'], reply_markup=markup,
+    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img,
+                                                                caption=params['name'], reply_markup=markup,
                                                                 parse_mode=types.ParseMode.HTML)
