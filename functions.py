@@ -5,7 +5,7 @@ import aiohttp
 from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from config import API_KEY
+from config import API_KEY, API_KEY_2
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
@@ -32,7 +32,6 @@ async def start(update, context):
                                                                   reply_markup=reply_markup)
 
 
-
 async def button(update, context):
     if update.callback_query:
         query = update.callback_query
@@ -43,18 +42,31 @@ async def button(update, context):
             await search_film(query, context)
         if query.data == 'search_by_name':
             await search_by_name(query, context)
+        if query.data.startswith('search_by_name'):
+            await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': query.data.split('~')[1]},
+                         dlt=True)
+        if query.data == 'search_by_actor':
+            await search_by_actor(query, context)
         if query.data == 'random':
             await random(context, 'https://api.kinopoisk.dev/v1/movie/random')
         if query.data == 'start':
             await start(update, context)
+        if query.data == 'delete':
+            await context.bot.delete_message(chat_id=context.user_data['chat_id'],
+                                             message_id=context.user_data['message'].message_id)
+            context.user_data['query_data'] = 'text'
 
     else:
         if 'query_data' in context.user_data:
+            name = update.message.text
             if context.user_data['query_data'] == 'search_by_name':
-                name = update.message.text
-                del context.user_data['query_data']
                 print(context.user_data)
                 await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name})
+            if context.user_data['query_data'] == 'search_by_actor':
+                print(context.user_data)
+                await print_films_by_actor(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons', params={'name': name},
+                                           headers={"X-API-KEY": API_KEY_2})
+            del context.user_data['query_data']
 
 
 async def search_film(query, context):
@@ -83,27 +95,35 @@ async def get_response(url, params=None, headers=None):
             return await resp.json()
 
 
-async def random(context, url, params=None):
+async def random(context, url, params=None, dlt=False):
     response = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
     pprint(response)
     text, img, url_trailer, url_sources = parser_film(response)
     chat_id = context.user_data['chat_id']
-    print(url_sources)
+    special_data = 'delete' if dlt else 'start'
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
         keyboard = [[InlineKeyboardButton('Рандом', callback_data='random')],
-                    [InlineKeyboardButton('Назад', callback_data='start')]]
+                    [InlineKeyboardButton('Назад', callback_data=special_data)]]
     else:
         keyboard = [[InlineKeyboardButton('Другое название', callback_data='search_by_name'),
-                     InlineKeyboardButton('Назад', callback_data='start')]]
+                     InlineKeyboardButton('Назад', callback_data=special_data)]]
 
     keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in url_sources.items()],
                 keyboard[0]] if url_sources else keyboard
-    print(keyboard)
     markup = InlineKeyboardMarkup(keyboard)
-    context.user_data['message_type'] = 'media'
-    context.bot['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup,
-                                                          parse_mode=types.ParseMode.HTML)
+    if context.user_data['message_type'] != 'media':
+        context.bot['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup,
+                                                              parse_mode=types.ParseMode.HTML)
+    else:
+        context.user_data['message_type'] = 'media'
+        context.bot['message'] = await context.bot.edit_message_media(chat_id,
+                                                                      message_id=context.user_data['message'].message_id,
+                                                                      media=img['url'], reply_markup=markup)
+        context.bot['message'] = await context.bot.edit_message_caption(chat_id,
+                                                                        message_id=context.user_data['message'].message_id,
+                                                                        caption=text, reply_markup=markup,
+                                                                        parse_mode=types.ParseMode.HTML)
 
 
 def parser_film(response):
@@ -171,3 +191,41 @@ async def search_by_name(query, context):
         context.user_data['message'] = await context.bot.send_message(text='Напишите название фильма',
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=markup)
+
+
+async def search_by_actor(query, context):
+    keyboard = [[InlineKeyboardButton('Назад', callback_data='search')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    if context.user_data['message_type'] == 'text':
+        context.user_data['message'] = await context.bot.edit_message_text(text='Напишите имя актёра',
+                                                                           chat_id=context.user_data['chat_id'],
+                                                                           reply_markup=markup,
+                                                                           message_id=context.user_data[
+                                                                               'message'].message_id)
+    else:
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(text='Напишите имя актёра',
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=markup)
+
+
+async def print_films_by_actor(context, url, params=None, headers=None):
+    response = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
+    pprint(response)
+    id = response['items'][0]['kinopoiskId']
+    response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
+    names = [item['nameRu'] for item in response['films'] if item['professionKey'] == 'ACTOR']
+    keyboard = []
+    for i in range(0, len(names), 2):
+        print('ok')
+        line = names[i:(i + 2) % len(names)]
+        print(line)
+        keyb = [InlineKeyboardButton(name, callback_data=f'search_by_name~{name}') for name in line]
+        keyboard.append(keyb)
+    keyboard.append([InlineKeyboardButton('Другой актёр', callback_data='search_by_actor'),
+                     InlineKeyboardButton('Назад', callback_data='search')])
+    markup = InlineKeyboardMarkup(keyboard)
+    context.user_data['message_type'] = 'text'
+    context.user_data['message'] = await context.bot.send_message(text=params['persons.name'],
+                                                                  chat_id=context.user_data['chat_id'],
+                                                                  reply_markup=markup)
