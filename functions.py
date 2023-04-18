@@ -21,7 +21,7 @@ async def start(update, context):
         context.user_data['username'] = update.message.from_user.username
         context.user_data['id'] = update.message.from_user.id
     keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
-                 InlineKeyboardButton("Оценки фильмов", callback_data='assessments')],
+                 InlineKeyboardButton("Мой кабинет", callback_data='my_cabinet')],
                 [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
                  InlineKeyboardButton("Подборки", callback_data='mixes')],
                 [InlineKeyboardButton("Рандом", callback_data='random')]
@@ -73,6 +73,14 @@ async def button(update, context):
                                            params={'name': name},
                                            headers={"X-API-KEY": API_KEY_2})
             del context.user_data['query_data']
+
+
+async def cabinet(query, context):
+    keyboard = [
+        [InlineKeyboardButton('Посмотреть позже', callback_data='watch_later'),
+         InlineKeyboardButton('Просмотренные', callback_data='watched')],
+        [InlineKeyboardButton('Назад', callback_data='start')]]
+    markup = InlineKeyboardMarkup(keyboard)
 
 
 async def search_film(query, context):

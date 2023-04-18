@@ -36,6 +36,20 @@ def add_film_title_to_db(id, title):
         return 'add_film'
 
 
+def register_user(chat_id, name):
+    with sqlite3.connect('data/users_db.sqlite3') as db_file:
+        cur = db_file.cursor()
+        result = cur.execute(f'select * from user where chat_id = {int(chat_id)}').fetchall()
+    if result:
+        print('already_registered')
+        return result
+    else:
+        params = (chat_id, name)
+        cur.execute(f'insert into user(chat_id, name) values (?, ?)', params)
+        print('registered')
+        return ''
+
+
 if __name__ == '__main__':
     print(add_to_want_films(12, "nor", 6))
     print(add_film_title_to_db(1, '12'))
