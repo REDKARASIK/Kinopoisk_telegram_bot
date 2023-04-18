@@ -28,11 +28,21 @@ async def start(update, context):
                 ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    context.user_data['message_type'] = 'text'
-    context.user_data['message'] = await context.bot.send_message(text=
-                                                                  "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
-                                                                  chat_id=context.user_data['chat_id'],
-                                                                  reply_markup=reply_markup)
+    if 'message_type' not in context.user_data: context.user_data['message_type'] = ' '
+    print(context.user_data['message_type'])
+    if context.user_data['message_type'] != 'text':
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(text=
+                                                                      "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=reply_markup)
+    else:
+        print(123, context.user_data['message_type'])
+        context.user_data['message'] = await context.bot.edit_message_text(text=
+                                                                           "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
+                                                                           message_id=context.user_data['message'].message_id,
+                                                                           chat_id=context.user_data['chat_id'],
+                                                                           reply_markup=reply_markup)
 
 
 async def button(update, context):
@@ -57,7 +67,7 @@ async def button(update, context):
         if query.data == 'delete':
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                              message_id=context.user_data['message'].message_id)
-            context.user_data['message_type'] = 'text'
+            context.user_data['message_type'] = 'text_media'
         if query.data.split('.')[0] == 'add_to_want_films':
             print(add_to_want_films(context.user_data['id'], context.user_data['username'], query.data.split('.')[1]))
 
@@ -78,7 +88,7 @@ async def button(update, context):
 async def cabinet(query, context):
     keyboard = [
         [InlineKeyboardButton('Посмотреть позже', callback_data='watch_later'),
-         InlineKeyboardButton('Просмотренные', callback_data='watched')],
+         InlineKeyboardButton('Уже смотрел', callback_data='watched')],
         [InlineKeyboardButton('Назад', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
 
@@ -117,16 +127,15 @@ async def random(context, url, params=None, dlt=False):
     chat_id = context.user_data['chat_id']
     special_data = 'delete' if dlt else 'start'
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
-        keyboard = [[InlineKeyboardButton('Рандом', callback_data='random'),
-                     InlineKeyboardButton('Добавить в посмотреть позже',
-                                          callback_data=f'add_to_want_films.{id_film}.{title}')],
+        keyboard = [[InlineKeyboardButton('Рандом', callback_data='random')],
                     [InlineKeyboardButton('Назад', callback_data=special_data)]]
     else:
-        keyboard = [[InlineKeyboardButton('Другое название', callback_data='search_by_name'),
-                     InlineKeyboardButton('Добавить в посмотреть позже', callback_data='add_to_want_films')],
+        keyboard = [[InlineKeyboardButton('Другое название', callback_data='search_by_name')],
                     [InlineKeyboardButton('Назад', callback_data=special_data)]]
 
     keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
+    keyboard.insert(1, [InlineKeyboardButton('Посмотреть позже', callback_data='watch_later'),
+                        InlineKeyboardButton('Уже смотрел', callback_data='watched')])
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
                  url_sources.items()]] + keyboard if url_sources else keyboard
     print(keyboard)
