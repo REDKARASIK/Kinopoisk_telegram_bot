@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 async def start(update, context):
     if 'chat_id' not in context.user_data:
         context.user_data['chat_id'] = update.message.chat_id
+        context.user_data['username'] = update.message.username
+        context.user_data['id'] = update.message.id
     keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
                  InlineKeyboardButton("Оценки фильмов", callback_data='assessments')],
                 [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
@@ -56,6 +58,8 @@ async def button(update, context):
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                              message_id=context.user_data['message'].message_id)
             context.user_data['message_type'] = 'text'
+        if query.data.split('.')[0] == 'add_to_want_films':
+            print(add_to_want_films(context.user_data['id'], context.user_data['username'], query.data.split('.')[1]))
 
     else:
         if 'query_data' in context.user_data:
@@ -100,12 +104,14 @@ async def get_response(url, params=None, headers=None):
 async def random(context, url, params=None, dlt=False):
     response = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
     pprint(response)
-    text, img, url_trailer, url_sources = parser_film(response)
+    text, img, url_trailer, url_sources, id_film, title = parser_film(response)
+    print(add_film_title_to_db(id_film, title))
     chat_id = context.user_data['chat_id']
     special_data = 'delete' if dlt else 'start'
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
         keyboard = [[InlineKeyboardButton('Рандом', callback_data='random'),
-                     InlineKeyboardButton('Добавить в посмотреть позже', callback_data='add_to_want_films')],
+                     InlineKeyboardButton('Добавить в посмотреть позже',
+                                          callback_data=f'add_to_want_films.{id_film}.{title}')],
                     [InlineKeyboardButton('Назад', callback_data=special_data)]]
     else:
         keyboard = [[InlineKeyboardButton('Другое название', callback_data='search_by_name'),
@@ -132,6 +138,7 @@ async def random(context, url, params=None, dlt=False):
 def parser_film(response):
     pprint(response)
     response = response['docs'][0] if 'docs' in response else response
+    id_film = response['id']
     alt_name = response.get('alternativeName', '')
     name = response.get('name', '')
     description = response.get('description', '')
@@ -167,7 +174,7 @@ def parser_film(response):
            f"{description if description else ''}"
     if len(text) > 4096: text = '\n'.join(text.split('\n')[:-1]) if len(
         '\n'.join(text.split('\n')[:-1])) <= 4096 else '\n'.join(text.split('\n')[:-2])
-    return text, poster, url_trailer, sources
+    return text, poster, url_trailer, sources, id_film, name
 
 
 def parser_person(response):
@@ -233,5 +240,6 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message_type'] = 'text'
     pprint(markup)
-    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img, caption=params['name'], reply_markup=markup,
+    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img,
+                                                                caption=params['name'], reply_markup=markup,
                                                                 parse_mode=types.ParseMode.HTML)
