@@ -6,6 +6,7 @@ from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import API_KEY, API_KEY_2
+from db_functions import *
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
@@ -64,7 +65,8 @@ async def button(update, context):
                 await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name})
             if context.user_data['query_data'] == 'search_by_actor':
                 print(context.user_data)
-                await print_films_by_actor(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons', params={'name': name},
+                await print_films_by_actor(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons',
+                                           params={'name': name},
                                            headers={"X-API-KEY": API_KEY_2})
             del context.user_data['query_data']
 
@@ -102,7 +104,8 @@ async def random(context, url, params=None, dlt=False):
     chat_id = context.user_data['chat_id']
     special_data = 'delete' if dlt else 'start'
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
-        keyboard = [[InlineKeyboardButton('Рандом', callback_data='random')],
+        keyboard = [[InlineKeyboardButton('Рандом', callback_data='random'),
+                     InlineKeyboardButton('Добавить в посмотреть позже', callback_data='add_to_want_films')],
                     [InlineKeyboardButton('Назад', callback_data=special_data)]]
     else:
         keyboard = [[InlineKeyboardButton('Другое название', callback_data='search_by_name'),
@@ -114,14 +117,17 @@ async def random(context, url, params=None, dlt=False):
     markup = InlineKeyboardMarkup(keyboard)
     print(context.user_data['message_type'])
     if context.user_data['message_type'] != 'media':
-        context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup,
-                                                              parse_mode=types.ParseMode.HTML)
-        context.user_data['message_type'] = 'media'
-    else:
-        context.user_data['message'] = await context.bot.delete_message(chat_id, context.user_data['message'].message_id)
         context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
                                                                     reply_markup=markup,
                                                                     parse_mode=types.ParseMode.HTML)
+        context.user_data['message_type'] = 'media'
+    else:
+        context.user_data['message'] = await context.bot.delete_message(chat_id,
+                                                                        context.user_data['message'].message_id)
+        context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
+                                                                    reply_markup=markup,
+                                                                    parse_mode=types.ParseMode.HTML)
+
 
 def parser_film(response):
     pprint(response)
