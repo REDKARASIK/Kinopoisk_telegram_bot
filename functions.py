@@ -6,6 +6,7 @@ from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import API_KEY, API_KEY_2
+from db_functions import *
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
@@ -17,8 +18,8 @@ logger = logging.getLogger(__name__)
 async def start(update, context):
     if 'chat_id' not in context.user_data:
         context.user_data['chat_id'] = update.message.chat_id
-        context.user_data['username'] = update.message.username
-        context.user_data['id'] = update.message.id
+        context.user_data['username'] = update.message.from_user.username
+        context.user_data['id'] = update.message.from_user.id
     keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
                  InlineKeyboardButton("Оценки фильмов", callback_data='assessments')],
                 [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
@@ -119,7 +120,7 @@ async def random(context, url, params=None, dlt=False):
 
     keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
-                url_sources.items()]] + keyboard if url_sources else keyboard
+                 url_sources.items()]] + keyboard if url_sources else keyboard
     print(keyboard)
     markup = InlineKeyboardMarkup(keyboard)
     print(context.user_data['message_type'])
@@ -129,8 +130,7 @@ async def random(context, url, params=None, dlt=False):
                                                                     parse_mode=types.ParseMode.HTML)
         context.user_data['message_type'] = 'media'
     else:
-        context.user_data['message'] = await context.bot.delete_message(chat_id,
-                                                                        context.user_data['message'].message_id)
+        await context.bot.delete_message(chat_id, context.user_data['message'].message_id)
         context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
                                                                     reply_markup=markup,
                                                                     parse_mode=types.ParseMode.HTML)
@@ -173,8 +173,7 @@ def parser_film(response):
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n" \
            f"{description if description else ''}"
-    if len(text) > 4096: text = '\n'.join(text.split('\n')[:-1]) if len(
-        '\n'.join(text.split('\n')[:-1])) <= 4096 else '\n'.join(text.split('\n')[:-2])
+    while len(text) > 4096: text = '\n'.join(text.split('\n')[:-1])
     return text, poster, url_trailer, sources, id_film, name
 
 
@@ -239,7 +238,7 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     keyboard.append([InlineKeyboardButton('Другой актёр', callback_data='search_by_actor'),
                      InlineKeyboardButton('Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
-    context.user_data['message_type'] = 'text'
+    context.user_data['message_type'] = 'text_media'
     pprint(markup)
     context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img,
                                                                 caption=params['name'], reply_markup=markup,
