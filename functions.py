@@ -64,6 +64,8 @@ async def button(update, context):
             await random(context, 'https://api.kinopoisk.dev/v1/movie/random')
         if query.data == 'start':
             await start(update, context)
+        if query.data == 'my_cabinet':
+            await cabinet(query, context)
         if query.data == 'delete':
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                              message_id=context.user_data['message'].message_id)
