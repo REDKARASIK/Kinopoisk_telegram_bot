@@ -6,6 +6,7 @@ from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import API_KEY, API_KEY_2
+from db_functions import *
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
@@ -20,7 +21,7 @@ async def start(update, context):
         context.user_data['username'] = update.message.username
         context.user_data['id'] = update.message.id
     keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
-                 InlineKeyboardButton("Оценки фильмов", callback_data='assessments')],
+                 InlineKeyboardButton("Мой кабинет", callback_data='my_cabinet')],
                 [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
                  InlineKeyboardButton("Подборки", callback_data='mixes')],
                 [InlineKeyboardButton("Рандом", callback_data='random')]
@@ -74,6 +75,14 @@ async def button(update, context):
             del context.user_data['query_data']
 
 
+async def cabinet(query, context):
+    keyboard = [
+        [InlineKeyboardButton('Посмотреть позже', callback_data='watch_later'),
+         InlineKeyboardButton('Просмотренные', callback_data='watched')],
+        [InlineKeyboardButton('Назад', callback_data='start')]]
+    markup = InlineKeyboardMarkup(keyboard)
+
+
 async def search_film(query, context):
     keyboard = [[InlineKeyboardButton('По названию', callback_data='search_by_name'),
                  InlineKeyboardButton('По актёру', callback_data='search_by_actor')],
@@ -119,7 +128,7 @@ async def random(context, url, params=None, dlt=False):
 
     keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
-                url_sources.items()]] + keyboard if url_sources else keyboard
+                 url_sources.items()]] + keyboard if url_sources else keyboard
     print(keyboard)
     markup = InlineKeyboardMarkup(keyboard)
     print(context.user_data['message_type'])
