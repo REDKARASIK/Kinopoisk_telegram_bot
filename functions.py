@@ -112,21 +112,19 @@ async def random(context, url, params=None, dlt=False):
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in url_sources.items()],
                 keyboard[0]] if url_sources else keyboard
     markup = InlineKeyboardMarkup(keyboard)
+    print(context.user_data['message_type'])
     if context.user_data['message_type'] != 'media':
-        context.bot['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup,
+        context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text, reply_markup=markup,
                                                               parse_mode=types.ParseMode.HTML)
-    else:
         context.user_data['message_type'] = 'media'
-        context.bot['message'] = await context.bot.edit_message_media(chat_id,
-                                                                      message_id=context.user_data['message'].message_id,
-                                                                      media=img['url'], reply_markup=markup)
-        context.bot['message'] = await context.bot.edit_message_caption(chat_id,
-                                                                        message_id=context.user_data['message'].message_id,
-                                                                        caption=text, reply_markup=markup,
-                                                                        parse_mode=types.ParseMode.HTML)
-
+    else:
+        context.user_data['message'] = await context.bot.delete_message(chat_id, context.user_data['message'].message_id)
+        context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
+                                                                    reply_markup=markup,
+                                                                    parse_mode=types.ParseMode.HTML)
 
 def parser_film(response):
+    pprint(response)
     response = response['docs'][0] if 'docs' in response else response
     alt_name = response.get('alternativeName', '')
     name = response.get('name', '')
@@ -146,14 +144,15 @@ def parser_film(response):
             sources[source['name']] = source['url']
     persons = parser_person(response.get('persons', ''))
     persons_text = ''
+    pprint(persons)
     if rate_imdb and rate_imdb > 7:
-        print(persons)
         if persons:
             for k, v in persons.items():
                 if len(v): persons_text += f"<strong>{k}</strong>: {', '.join(v)}\n"
     else:
-        if persons['Режиссеры']: persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
-        if persons['Актеры']: persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
+        if persons:
+            if persons['Режиссеры']: persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
+            if persons['Актеры']: persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
 
     text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong> {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} <strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
            f"<strong>жанр:</strong> {genre}\n" \
@@ -210,22 +209,23 @@ async def search_by_actor(query, context):
 
 
 async def print_films_by_actor(context, url, params=None, headers=None):
-    response = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
+    response = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
     pprint(response)
     id = response['items'][0]['kinopoiskId']
     response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
     names = [item['nameRu'] for item in response['films'] if item['professionKey'] == 'ACTOR']
     keyboard = []
-    for i in range(0, len(names), 2):
+    for i in range(0, 11, 2):
         print('ok')
         line = names[i:(i + 2) % len(names)]
         print(line)
-        keyb = [InlineKeyboardButton(name, callback_data=f'search_by_name~{name}') for name in line]
+        keyb = [InlineKeyboardButton(name[:21], callback_data=f'search_by_name~{name[:20]}') for name in line]
         keyboard.append(keyb)
     keyboard.append([InlineKeyboardButton('Другой актёр', callback_data='search_by_actor'),
                      InlineKeyboardButton('Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message_type'] = 'text'
-    context.user_data['message'] = await context.bot.send_message(text=params['persons.name'],
+    pprint(markup)
+    context.user_data['message'] = await context.bot.send_message(text=params['name'],
                                                                   chat_id=context.user_data['chat_id'],
                                                                   reply_markup=markup)
