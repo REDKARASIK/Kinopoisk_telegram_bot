@@ -54,7 +54,7 @@ async def button(update, context):
         if query.data == 'delete':
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                              message_id=context.user_data['message'].message_id)
-            context.user_data['query_data'] = 'text'
+            context.user_data['message_type'] = 'text'
 
     else:
         if 'query_data' in context.user_data:
@@ -212,6 +212,7 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     response = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
     pprint(response)
     id = response['items'][0]['kinopoiskId']
+    img = response['items'][0]['posterUrl']
     response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
     names = [item['nameRu'] for item in response['films'] if item['professionKey'] == 'ACTOR']
     keyboard = []
@@ -226,6 +227,5 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message_type'] = 'text'
     pprint(markup)
-    context.user_data['message'] = await context.bot.send_message(text=params['name'],
-                                                                  chat_id=context.user_data['chat_id'],
-                                                                  reply_markup=markup)
+    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img, caption=params['name'], reply_markup=markup,
+                                                                parse_mode=types.ParseMode.HTML)
