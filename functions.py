@@ -20,6 +20,7 @@ async def start(update, context):
         context.user_data['chat_id'] = update.message.chat_id
         context.user_data['username'] = update.message.from_user.username
         context.user_data['id'] = update.message.from_user.id
+        print(register_user(context.user_data['id'], context.user_data['username']))
     keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
                  InlineKeyboardButton("Мой кабинет", callback_data='my_cabinet')],
                 [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
@@ -56,6 +57,8 @@ async def button(update, context):
             await start(update, context)
         if query.data == 'my_cabinet':
             await cabinet(query, context)
+        if query.data == 'watch_later':
+            await watch_later(query, context)
         if query.data == 'delete':
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                              message_id=context.user_data['message'].message_id)
@@ -77,12 +80,44 @@ async def button(update, context):
             del context.user_data['query_data']
 
 
+async def watch_later(query, context):
+    keyboard = [[InlineKeyboardButton('Назад', callback_data='my_cabinet')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    later_data = get_all_later(context.user_data['id'])
+    print(later_data)
+    if context.user_data['message_type'] == 'text':
+        context.user_data['message'] = await context.bot.edit_message_text(
+            text=f'Список фильмов и сериалов, которые вы хотите посмотреть позже.',
+            chat_id=context.user_data['chat_id'],
+            reply_markup=markup,
+            message_id=context.user_data[
+                'message'].message_id)
+    else:
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(
+            text=f'Список фильмов и сериалов, которые вы хотите посмотреть позже.',
+            chat_id=context.user_data['chat_id'],
+            reply_markup=markup)
+
+
 async def cabinet(query, context):
     keyboard = [
         [InlineKeyboardButton('Посмотреть позже', callback_data='watch_later'),
          InlineKeyboardButton('Просмотренные', callback_data='watched')],
         [InlineKeyboardButton('Назад', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
+    if context.user_data['message_type'] == 'text':
+        context.user_data['message'] = await context.bot.edit_message_text(
+            text=f'Кабинет @{context.user_data["username"]}',
+            chat_id=context.user_data['chat_id'],
+            reply_markup=markup,
+            message_id=context.user_data[
+                'message'].message_id)
+    else:
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(text=f'Кабинет @{context.user_data["username"]}',
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=markup)
 
 
 async def search_film(query, context):

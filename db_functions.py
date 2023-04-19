@@ -41,13 +41,18 @@ def register_user(chat_id, name):
         cur = db_file.cursor()
         result = cur.execute(f'select * from user where chat_id = {int(chat_id)}').fetchall()
     if result:
-        print('already_registered')
-        return result
+        return 'already_registered'
     else:
         params = (chat_id, name)
         cur.execute(f'insert into user(chat_id, name) values (?, ?)', params)
-        print('registered')
-        return ''
+        return 'registered'
+
+
+def get_all_later(id):
+    with sqlite3.connect('data/users_db.sqlite3') as db_file:
+        cur = db_file.cursor()
+        result = cur.execute(f'select want_films from user where chat_id = {id}').fetchall()
+        return result
 
 
 if __name__ == '__main__':
