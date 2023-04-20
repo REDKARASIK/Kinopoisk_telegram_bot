@@ -268,6 +268,7 @@ def parser_film(response):
     alt_name = response.get('alternativeName', '')
     name = response.get('name', '')
     description = response.get('description', '')
+    short_description = response.get('shortDescription', '')
     year = response.get('year', '')
     age_rate = response.get('ageRating', '')
     genre = ', '.join(map(lambda x: x['name'], response.get('genres', '')[:5]))
@@ -292,13 +293,14 @@ def parser_film(response):
         if persons:
             if persons['Режиссеры']: persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
             if persons['Актеры']: persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
-
     text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong> {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} <strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
            f"<strong>жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
-           f"{persons_text}\n" \
-           f"{description if description else ''}"
-    while len(text) > 4096: text = '\n'.join(text.split('\n')[:-1])
+           f"{persons_text}\n"
+    text += description if len(text + description) <= 1024 else short_description if (short_description and (text + short_description)) <= 1024 else ''
+    while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
+    print(text)
+    print(len(text))
     return text, poster, url_trailer, sources, id_film, name
 
 
