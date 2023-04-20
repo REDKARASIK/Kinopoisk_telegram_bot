@@ -5,7 +5,7 @@ def add_to_want_films(chat_id, name_film, id_film):
     with sqlite3.connect('data/users_db.sqlite3') as db_file:
         cur = db_file.cursor()
         result = cur.execute(f'select * from user where chat_id = {int(chat_id)}').fetchall()
-    if result:
+    if result[0][3]:
         films = result[0][3].split(',')
         if str(id_film) not in films:
             films.append(str(id_film))
@@ -17,8 +17,8 @@ def add_to_want_films(chat_id, name_film, id_film):
         else:
             return 'already_add'
     else:
-        params = (chat_id, name_film, id_film)
-        cur.execute('insert into user(chat_id, name, want_films) values (?,?,?)', params)
+        params = (id_film,)
+        cur.execute(f'update user set want_films = ? where chat_id = {int(chat_id)}', params)
         db_file.commit()
         return 'add_to_want'
 
@@ -45,6 +45,7 @@ def register_user(chat_id, name):
     else:
         params = (chat_id, name)
         cur.execute(f'insert into user(chat_id, name) values (?, ?)', params)
+        db_file.commit()
         return 'registered'
 
 
@@ -55,6 +56,13 @@ def get_all_later(id):
         return result
 
 
+def get_all_watched(id):
+    with sqlite3.connect('data/users_db.sqlite3') as db_file:
+        cur = db_file.cursor()
+        result = cur.execute(f'select watch_films from user where chat_id = {int(id)}').fetchall()
+        return result
+
+
 def get_all_from_films():
     with sqlite3.connect('data/users_db.sqlite3') as db_file:
         cur = db_file.cursor()
@@ -62,6 +70,34 @@ def get_all_from_films():
         return result
 
 
+def add_to_watched(id, name, id_film):
+    flag = False
+    if get_all_later(int(id))[0][0]:
+        if str(id_film) in get_all_later(id)[0][0].split(','):
+            later_films = get_all_later(id)[0][0].split(',')
+            index_1 = later_films.index(str(id_film))
+            del later_films[index_1]
+            later_films = ','.join(later_films)
+            flag = True
+    with sqlite3.connect('data/users_db.sqlite3') as db_file:
+        cur = db_file.cursor()
+        params = (id,)
+        result = cur.execute('select watch_films from user where chat_id = ?', params).fetchall()
+    if result[0][0]:
+        films = result[0][0].split(',')
+        if str(id_film) not in films:
+            films.append(str(id_film))
+        films = ','.join(films)
+    else:
+        films = f'{id_film}'
+    if flag:
+        params = (later_films,)
+        cur.execute(f'update user set want_films = ? where chat_id = {int(id)}', params)
+    params = (films,)
+    cur.execute(f'update user set watch_films = ? where chat_id = {int(id)}', params)
+    db_file.commit()
+    return 'add_to_watched'
+
+
 if __name__ == '__main__':
-    print(add_to_want_films(12, "nor", 6))
-    print(add_film_title_to_db(1, '12'))
+    add_to_watched(1114120081, 'depressedsion', 1030809)
