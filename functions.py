@@ -64,6 +64,8 @@ async def button(update, context):
             await search_by_person(query, context, key=1)
         if query.data == 'search_by_director':
             await search_by_person(query, context, key=2)
+        if query.data == 'search_by_genre':
+            await search_by_genre(context)
         if query.data.startswith('search_by_id'):
             await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'id': query.data.split('.')[1]},
                          dlt=True)
@@ -99,6 +101,9 @@ async def button(update, context):
                 await print_films_by_person(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons',
                                             params={'name': name},
                                             headers={"X-API-KEY": API_KEY_2}, key=2)
+            if context.user_data['query_data'] == 'search_by_genre':
+                await print_film_by_genre(context, params={'genres.name': name.lower()},
+                                          headers={"X-API-KEY": API_KEY})
             del context.user_data['query_data']
 
 
@@ -346,8 +351,34 @@ async def print_films_by_person(context, url, params=None, headers=None, key=1):
                                                                 parse_mode=types.ParseMode.HTML)
 
 
-async def search_by_genre(query, context):
+async def search_by_genre(context):
+    keyboard = [[InlineKeyboardButton('Открыть список жанров', callback_data='list_of_genres')],
+                [InlineKeyboardButton('Назад', callback_data='search')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    if context.user_data['message_type'] == 'text':
+        context.user_data['message'] = await context.bot.edit_message_text(text='Напишите название жанра',
+                                                                           chat_id=context.user_data['chat_id'],
+                                                                           reply_markup=markup,
+                                                                           message_id=context.user_data[
+                                                                               'message'].message_id)
+    else:
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(text='Напишите название жанра',
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=markup)
+
+
+async def print_film_by_genre(context, params=None, headers=None):
     genres = ['аниме', 'биография', 'боевик', 'вестерн', 'военный', 'детектив', 'детский', 'для взрослых',
               'документальный', 'драма', 'игра', 'история', 'комедия', 'концерт', 'короткометражка', 'криминал',
               'мелодрама', 'музыка', 'мультфильм', 'мюзикл', 'новости', 'приключения', 'реальное ТВ', 'семейный',
               'спорт', 'ток-шоу', 'триллер', 'ужасы', 'фантастика', 'фильм-нуар', 'фэнтези', 'церемония']
+    genre = params['genres.name']
+    if genre not in genres:
+        context.user_data['message'] = await context.bot.send_message(
+            text='Что-то пошло не так\nИли вы ошиблись в названии\nПопробуйте ещё раз',
+            chat_id=context.user_data['chat_id'],
+            reply_markup=markup)
+        await search_by_genre(context)
+    else:
+        await random(context, 'https://api.kinopoisk.dev/v1/movie', params=params)
