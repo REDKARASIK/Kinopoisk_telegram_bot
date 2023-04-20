@@ -75,6 +75,8 @@ async def button(update, context):
             await cabinet(query, context)
         if query.data.split('.')[0] == 'watch_later':
             await watch_later(query, context)
+        if query.data.split('.')[0] == 'print_films_by_person':
+            await print_films_by_person(context, query.data, None)
         if query.data == 'delete':
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                              message_id=context.user_data['message'].message_id)
@@ -91,12 +93,14 @@ async def button(update, context):
                 await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name})
             if context.user_data['query_data'] == 'search_by_actor':
                 print(context.user_data)
-                await print_films_by_person(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons',
+                await print_films_by_person(context, 'print_films_by_person',
+                                            'https://kinopoiskapiunofficial.tech/api/v1/persons',
                                             params={'name': name},
                                             headers={"X-API-KEY": API_KEY_2}, key=1)
             if context.user_data['query_data'] == 'search_by_director':
                 print(context.user_data)
-                await print_films_by_person(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons',
+                await print_films_by_person(context, 'print_films_by_person',
+                                            'https://kinopoiskapiunofficial.tech/api/v1/persons',
                                             params={'name': name},
                                             headers={"X-API-KEY": API_KEY_2}, key=2)
             del context.user_data['query_data']
@@ -314,35 +318,54 @@ async def search_by_person(query, context, key=1):
                                                                       reply_markup=markup)
 
 
-async def print_films_by_person(context, url, params=None, headers=None, key=1):
+async def print_films_by_person(context, query_data, url, params=None, headers=None, key=1):
+    query_data1 = query_data.split('.')
     keys = {1: ['актёр', 'ACTOR'], 2: ['режиссёр', 'DIRECTOR']}
-    response = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
-    pprint(response)
-    id = response['items'][0]['kinopoiskId']
-    img = response['items'][0]['posterUrl']
-    response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
-    names = []
-    for item in response['films']:
-        if item['professionKey'] == keys[key][1]:
-            if item['rating']:
-                names.append((item['nameRu'], float(item['rating'])))
-    names.sort(key=lambda x: -x[1])
-    pprint(names)
-    names = list(map(lambda x: x[0], names))
+    if len(query_data1) == 1:
+        response = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
+        pprint(response)
+        id = response['items'][0]['kinopoiskId']
+        img = response['items'][0]['posterUrl']
+        context.user_data['photo'] = img
+        context.user_data['name'] = params['name']
+        response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
+        names = []
+        for item in response['films']:
+            if item['professionKey'] == keys[key][1]:
+                if item['rating']:
+                    names.append((item['nameRu'], float(item['rating'])))
+        names.sort(key=lambda x: -x[1])
+        pprint(names)
+        names = list(map(lambda x: x[0], names))
+        context.user_data['films_by_enter'] = {}
+        c = 1
+        for i in range(0, len(names), 8):
+            context.user_data['films_by_enter'][c] = names[i:i + 8]
+            c += 1
+        query_data1.append(1)
+    print(context.user_data['films_by_enter'])
     keyboard = []
-    for i in range(0, 11, 2):
-        print('ok')
-        line = names[i:(i + 2) % len(names)]
-        print(line)
-        keyb = [InlineKeyboardButton(name[:21], callback_data=f'search_by_name~{name[:20]}') for name in line]
-        keyboard.append(keyb)
+    markup_data = context.user_data['films_by_enter'][int(query_data1[-1])]
+    for i in range(0, len(markup_data), 2):
+        keyboard.append([InlineKeyboardButton(name[:21], callback_data=f'search_by_name~{name[:20]}') for name in
+                         markup_data[i:i + 2]])
+    next_previous = []
+    if int(query_data1[-1]) != 1:
+        next_previous.append(
+            InlineKeyboardButton('<', callback_data=f'print_films_by_person.{int(query_data1[-1]) - 1}'))
+    if int(query_data1[-1]) != len(context.user_data['films_by_enter']):
+        next_previous.append(
+            InlineKeyboardButton('>', callback_data=f'print_films_by_person.{int(query_data1[-1]) + 1}'))
+    if next_previous:
+        keyboard.append(next_previous)
     keyboard.append([InlineKeyboardButton(f'Другой {keys[key][0]}', callback_data=f'search_by_{keys[key][1].lower()}'),
                      InlineKeyboardButton('Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message_type'] = 'text_media'
     pprint(markup)
-    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img,
-                                                                caption=params['name'], reply_markup=markup,
+    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'],
+                                                                context.user_data['photo'],
+                                                                caption=context.user_data['name'], reply_markup=markup,
                                                                 parse_mode=types.ParseMode.HTML)
 
 
