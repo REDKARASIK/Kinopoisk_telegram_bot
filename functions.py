@@ -41,7 +41,8 @@ async def start(update, context):
         print(123, context.user_data['message_type'])
         context.user_data['message'] = await context.bot.edit_message_text(text=
                                                                            "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
-                                                                           message_id=context.user_data['message'].message_id,
+                                                                           message_id=context.user_data[
+                                                                               'message'].message_id,
                                                                            chat_id=context.user_data['chat_id'],
                                                                            reply_markup=reply_markup)
 
@@ -60,7 +61,12 @@ async def button(update, context):
             await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': query.data.split('~')[1]},
                          dlt=True)
         if query.data == 'search_by_actor':
-            await search_by_actor(query, context)
+            await search_by_person(query, context, key=1)
+        if query.data == 'search_by_director':
+            await search_by_person(query, context, key=2)
+        if query.data.startswith('search_by_id'):
+            await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'id': query.data.split('.')[1]},
+                         dlt=True)
         if query.data == 'random':
             await random(context, 'https://api.kinopoisk.dev/v1/movie/random')
         if query.data == 'start':
@@ -84,9 +90,14 @@ async def button(update, context):
                 await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name})
             if context.user_data['query_data'] == 'search_by_actor':
                 print(context.user_data)
-                await print_films_by_actor(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons',
-                                           params={'name': name},
-                                           headers={"X-API-KEY": API_KEY_2})
+                await print_films_by_person(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons',
+                                            params={'name': name},
+                                            headers={"X-API-KEY": API_KEY_2}, key=1)
+            if context.user_data['query_data'] == 'search_by_director':
+                print(context.user_data)
+                await print_films_by_person(context, 'https://kinopoiskapiunofficial.tech/api/v1/persons',
+                                            params={'name': name},
+                                            headers={"X-API-KEY": API_KEY_2}, key=2)
             del context.user_data['query_data']
 
 
@@ -259,23 +270,25 @@ async def search_by_name(query, context):
                                                                       reply_markup=markup)
 
 
-async def search_by_actor(query, context):
+async def search_by_person(query, context, key=1):
+    keys = {1: 'актёра', 2: 'режиссёра'}
     keyboard = [[InlineKeyboardButton('Назад', callback_data='search')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
-        context.user_data['message'] = await context.bot.edit_message_text(text='Напишите имя актёра',
+        context.user_data['message'] = await context.bot.edit_message_text(text=f'Напишите имя {keys[key]}',
                                                                            chat_id=context.user_data['chat_id'],
                                                                            reply_markup=markup,
                                                                            message_id=context.user_data[
                                                                                'message'].message_id)
     else:
         context.user_data['message_type'] = 'text'
-        context.user_data['message'] = await context.bot.send_message(text='Напишите имя актёра',
+        context.user_data['message'] = await context.bot.send_message(text=f'Напишите имя {keys[key]}',
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=markup)
 
 
-async def print_films_by_actor(context, url, params=None, headers=None):
+async def print_films_by_person(context, url, params=None, headers=None, key=1):
+    keys = {1: ['актёр', 'ACTOR'], 2: ['режиссёр', 'DIRECTOR']}
     response = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
     pprint(response)
     id = response['items'][0]['kinopoiskId']
@@ -283,7 +296,7 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
     names = []
     for item in response['films']:
-        if item['professionKey'] == 'ACTOR':
+        if item['professionKey'] == keys[key][1]:
             if item['rating']:
                 names.append((item['nameRu'], float(item['rating'])))
     names.sort(key=lambda x: -x[1])
@@ -296,7 +309,7 @@ async def print_films_by_actor(context, url, params=None, headers=None):
         print(line)
         keyb = [InlineKeyboardButton(name[:21], callback_data=f'search_by_name~{name[:20]}') for name in line]
         keyboard.append(keyb)
-    keyboard.append([InlineKeyboardButton('Другой актёр', callback_data='search_by_actor'),
+    keyboard.append([InlineKeyboardButton(f'Другой {keys[key][0]}', callback_data=f'search_by_{keys[key][1].lower()}'),
                      InlineKeyboardButton('Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message_type'] = 'text_media'
@@ -304,3 +317,136 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'], img,
                                                                 caption=params['name'], reply_markup=markup,
                                                                 parse_mode=types.ParseMode.HTML)
+
+
+async def search_by_genre(query, context):
+    genres = [
+  {
+    "name": "аниме",
+    "slug": "anime"
+  },
+  {
+    "name": "биография",
+    "slug": "biografiya"
+  },
+  {
+    "name": "боевик",
+    "slug": "boevik"
+  },
+  {
+    "name": "вестерн",
+    "slug": "vestern"
+  },
+  {
+    "name": "военный",
+    "slug": "voennyy"
+  },
+  {
+    "name": "детектив",
+    "slug": "detektiv"
+  },
+  {
+    "name": "детский",
+    "slug": "detskiy"
+  },
+  {
+    "name": "для взрослых",
+    "slug": "dlya-vzroslyh"
+  },
+  {
+    "name": "документальный",
+    "slug": "dokumentalnyy"
+  },
+  {
+    "name": "драма",
+    "slug": "drama"
+  },
+  {
+    "name": "игра",
+    "slug": "igra"
+  },
+  {
+    "name": "история",
+    "slug": "istoriya"
+  },
+  {
+    "name": "комедия",
+    "slug": "komediya"
+  },
+  {
+    "name": "концерт",
+    "slug": "koncert"
+  },
+  {
+    "name": "короткометражка",
+    "slug": "korotkometrazhka"
+  },
+  {
+    "name": "криминал",
+    "slug": "kriminal"
+  },
+  {
+    "name": "мелодрама",
+    "slug": "melodrama"
+  },
+  {
+    "name": "музыка",
+    "slug": "muzyka"
+  },
+  {
+    "name": "мультфильм",
+    "slug": "multfilm"
+  },
+  {
+    "name": "мюзикл",
+    "slug": "myuzikl"
+  },
+  {
+    "name": "новости",
+    "slug": "novosti"
+  },
+  {
+    "name": "приключения",
+    "slug": "priklyucheniya"
+  },
+  {
+    "name": "реальное ТВ",
+    "slug": "realnoe-TV"
+  },
+  {
+    "name": "семейный",
+    "slug": "semeynyy"
+  },
+  {
+    "name": "спорт",
+    "slug": "sport"
+  },
+  {
+    "name": "ток-шоу",
+    "slug": "tok-shou"
+  },
+  {
+    "name": "триллер",
+    "slug": "triller"
+  },
+  {
+    "name": "ужасы",
+    "slug": "uzhasy"
+  },
+  {
+    "name": "фантастика",
+    "slug": "fantastika"
+  },
+  {
+    "name": "фильм-нуар",
+    "slug": "film-nuar"
+  },
+  {
+    "name": "фэнтези",
+    "slug": "fentezi"
+  },
+  {
+    "name": "церемония",
+    "slug": "ceremoniya"
+  }
+]
