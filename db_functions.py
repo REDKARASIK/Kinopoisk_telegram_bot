@@ -54,6 +54,12 @@ def get_all_later(id):
         result = cur.execute(f'select want_films from user where chat_id = {id}').fetchall()
         return result
 
+def get_all_from_films():
+    with sqlite3.connect('data/users_db.sqlite3') as db_file:
+        cur = db_file.cursor()
+        result = cur.execute(f'select * from films').fetchall()
+        return result
+
 
 if __name__ == '__main__':
     print(add_to_want_films(12, "nor", 6))

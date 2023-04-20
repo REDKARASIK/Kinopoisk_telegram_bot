@@ -73,7 +73,7 @@ async def button(update, context):
             await start(update, context)
         if query.data == 'my_cabinet':
             await cabinet(query, context)
-        if query.data == 'watch_later':
+        if query.data.split('.')[0] == 'watch_later':
             await watch_later(query, context)
         if query.data == 'delete':
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
@@ -81,6 +81,7 @@ async def button(update, context):
             context.user_data['message_type'] = 'text_media'
         if query.data.split('.')[0] == 'add_to_want_films':
             print(add_to_want_films(context.user_data['id'], context.user_data['username'], query.data.split('.')[1]))
+
 
     else:
         if 'query_data' in context.user_data:
@@ -102,10 +103,36 @@ async def button(update, context):
 
 
 async def watch_later(query, context):
-    keyboard = [[InlineKeyboardButton('Назад', callback_data='my_cabinet')]]
+    query_data = query.data.split('.')
+    if len(query_data) == 1:
+        all_watch = get_all_from_films()
+        context.user_data['dict_films'] = {}
+        for i in all_watch:
+            context.user_data['dict_films'][i[0]] = i[1]
+        later_data = get_all_later(context.user_data['id'])[0]
+        c = 1
+        context.user_data['dict_of_later_watch'] = {}
+        for i in range(0, len(later_data[0].split(',')), 8):
+            context.user_data['dict_of_later_watch'][c] = later_data[0].split(',')[i:i + 8]
+            c += 1
+        query_data.append(1)
+    markup_data = context.user_data['dict_of_later_watch'][int(query_data[-1])]
+    print(markup_data)
+    print(context.user_data['dict_of_later_watch'])
+    keyboard = []
+    for i in range(0, len(markup_data), 2):
+        keyboard.append(
+            [InlineKeyboardButton(context.user_data["dict_films"][int(i)], callback_data=f'search_by_id.{i}') for i in
+             markup_data[i:i + 2]])
+    next_previous = []
+    if int(query_data[-1]) != 1:
+        next_previous.append(InlineKeyboardButton('<', callback_data=f'watch_later.{int(query_data[-1]) - 1}'))
+    if int(query_data[-1]) != len(context.user_data['dict_of_later_watch']):
+        next_previous.append(InlineKeyboardButton('>', callback_data=f'watch_later.{int(query_data[-1]) + 1}'))
+    if next_previous:
+        keyboard.append(next_previous)
+    keyboard.append([InlineKeyboardButton('Назад', callback_data='my_cabinet')])
     markup = InlineKeyboardMarkup(keyboard)
-    later_data = get_all_later(context.user_data['id'])
-    print(later_data)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(
             text=f'Список фильмов и сериалов, которые вы хотите посмотреть позже.',
@@ -182,7 +209,7 @@ async def random(context, url, params=None, dlt=False):
                     [InlineKeyboardButton('Назад', callback_data=special_data)]]
 
     keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
-    keyboard.insert(1, [InlineKeyboardButton('Посмотреть позже', callback_data='watch_later'),
+    keyboard.insert(1, [InlineKeyboardButton('Посмотреть позже', callback_data=f'add_to_want_films.{id_film}'),
                         InlineKeyboardButton('Уже смотрел', callback_data='watched')])
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
                  url_sources.items()]] + keyboard if url_sources else keyboard
