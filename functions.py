@@ -281,7 +281,14 @@ async def print_films_by_actor(context, url, params=None, headers=None):
     id = response['items'][0]['kinopoiskId']
     img = response['items'][0]['posterUrl']
     response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
-    names = [item['nameRu'] for item in response['films'] if item['professionKey'] == 'ACTOR']
+    names = []
+    for item in response['films']:
+        if item['professionKey'] == 'ACTOR':
+            if item['rating']:
+                names.append((item['nameRu'], float(item['rating'])))
+    names.sort(key=lambda x: -x[1])
+    pprint(names)
+    names = list(map(lambda x: x[0], names))
     keyboard = []
     for i in range(0, 11, 2):
         print('ok')
