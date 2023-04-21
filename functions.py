@@ -217,19 +217,39 @@ async def get_response(url, params=None, headers=None):
             return await resp.json(), str(resp.ok)
 
 
-async def check_ok(context, ok):
-    if not ok:
+async def check_ok(context, ok, response, edit=False):
+    if ok == 'False':
+        user_id, name, chat_id, message_id = context.user_data['id'], context.user_data['username'], context.user_data[
+            'chat_id'], context.user_data['message'].message_id
+        lines = open('data/errors.txt', 'r', encoding='utf8').readlines()
+        line = f"{user_id}:{name} чат:{chat_id} сообщение:{message_id}\n{response}\n\n"
+        lines.append(line)
+        with open('data/errors.txt', 'w', encoding='utf8') as file:
+            file.writelines(lines)
         keyboard = [[InlineKeyboardButton('Домой', callback_data='start')]]
         markup = InlineKeyboardMarkup(keyboard)
-        context.user_data['message'] = await context.bot.send_message(
-            text='Похоже что-то пошло не так!\nВы будете перенаправлены на домашнюю страницу',
-            chat_id=context.user_data['chat_id'], reply_markup=markup)
-    else:
-        return 1
+        print(context.user_data['message_type'])
+        if not edit:
+            context.user_data['message_type'] = 'text'
+            context.user_data['message'] = await context.bot.send_message(
+                text='Похоже что-то пошло не так!\nВы будете перенаправлены на домашнюю страницу',
+                chat_id=chat_id, reply_markup=markup)
+        else:
+            context.user_data['message'] = await context.bot.edit_message_text(
+                text='Похоже что-то пошло не так!\nВы будете перенаправлены на домашнюю страницу',
+                message_id=message_id,
+                chat_id=chat_id, reply_markup=markup)
+        return 0
+    return 1
 
 
 async def random(context, url, params=None, dlt=False):
     response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
+    print(ok)
+    ok = 'False' if response.get('total', 0) == 0 else ok
+    edit = True if 'random' in url else False
+    status = await check_ok(context, ok, response, edit=edit)
+    if not status: return 0
     text, img, url_trailer, url_sources, id_film, title = parser_film(response)
     print(add_film_title_to_db(id_film, title))
     chat_id = context.user_data['chat_id']
@@ -297,7 +317,8 @@ def parser_film(response):
            f"<strong>жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
-    text += description if len(text + description) <= 1024 else short_description if (short_description and (text + short_description)) <= 1024 else ''
+    text += description if len(text + description) <= 1024 else short_description if (short_description and (
+                text + short_description)) <= 1024 else ''
     while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
     print(text)
     print(len(text))
@@ -353,13 +374,19 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
     query_data1 = query_data.split('.')
     keys = {1: ['актёр', 'ACTOR'], 2: ['режиссёр', 'DIRECTOR']}
     if len(query_data1) == 1:
-        response = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
-        pprint(response)
+        response, ok = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
+        ok = 'False' if response.get('total', 0) == 0 else ok
+        status = await check_ok(context, ok, response)
+        if not status: return 0
         id = response['items'][0]['kinopoiskId']
         img = response['items'][0]['posterUrl']
         context.user_data['photo'] = img
         context.user_data['name'] = response['items'][0]['nameRu']
-        response = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id), headers=headers)
+        response, ok = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id),
+                                          headers=headers)
+        ok = 'False' if response.get('total', 0) == 0 else ok
+        status = await check_ok(context, ok, response)
+        if not status: return 0
         names = []
         for item in response['films']:
             if item['professionKey'] == keys[key][1]:
