@@ -317,7 +317,7 @@ def parser_film(response):
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
     text += description if len(text + description) <= 1024 else short_description if (short_description and len(
-                text + short_description)) <= 1024 else ''
+        text + short_description)) <= 1024 else ''
     while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
     print(text)
     print(len(text))

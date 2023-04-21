@@ -99,5 +99,20 @@ def add_to_watched(id, name, id_film):
     return 'add_to_watched'
 
 
+def get_all_films_from_id(id):
+    with sqlite3.connect('data/users_db.sqlite3') as db_file:
+        cur = db_file.cursor()
+        result = cur.execute(f'select want_films, watch_films from user where chat_id = {int(id)}').fetchall()
+        films = ''
+        if result[0][0]:
+            films = result[0][0]
+        if result[0][1]:
+            if films:
+                films += f',{result[0][1]}'
+            else:
+                films = result[0][1]
+        return films.split(',')
+
+
 if __name__ == '__main__':
-    add_to_watched(1114120081, 'depressedsion', 1030809)
+    print(get_all_films_from_id(1))
