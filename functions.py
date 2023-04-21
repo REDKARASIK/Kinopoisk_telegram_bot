@@ -86,8 +86,8 @@ async def button(update, context):
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                              message_id=context.user_data['message'].message_id)
             context.user_data['message_type'] = 'text_media'
-        if query.data == 'list_of_genres':
-            await list_of_genres(context)
+        if query.data.split('.')[0] == 'list_of_genres':
+            await list_of_genres(query.data, context)
         if query.data.split('.')[0] == 'add_to_want_films':
             print(add_to_want_films(context.user_data['id'], context.user_data['username'], query.data.split('.')[1]))
 
@@ -462,9 +462,35 @@ async def print_film_by_genre(context, params=None, headers=None):
         await random(context, 'https://api.kinopoisk.dev/v1/movie', params=params)
 
 
-async def list_of_genres(context):
-    genres = ['аниме', 'биография', 'боевик', 'вестерн', 'военный', 'детектив', 'детский', 'для взрослых',
-              'документальный', 'драма', 'игра', 'история', 'комедия', 'концерт', 'короткометражка', 'криминал',
-              'мелодрама', 'музыка', 'мультфильм', 'мюзикл', 'новости', 'приключения', 'реальное ТВ', 'семейный',
-              'спорт', 'ток-шоу', 'триллер', 'ужасы', 'фантастика', 'фильм-нуар', 'фэнтези', 'церемония']
-    # нужно сделать листание жанров!!!
+async def list_of_genres(query, context):
+    genres = {1: ['аниме', 'биография', 'боевик', 'вестерн', 'военный', 'детектив', 'детский', 'для взрослых'],
+              2: ['документальный', 'драма', 'игра', 'история', 'комедия', 'концерт', 'короткометражка', 'криминал'],
+              3: ['мелодрама', 'музыка', 'мультфильм', 'мюзикл', 'новости', 'приключения', 'реальное ТВ', 'семейный'],
+              4: ['спорт', 'ток-шоу', 'триллер', 'ужасы', 'фантастика', 'фильм-нуар', 'фэнтези', 'церемония']}
+    markup_query = query.split('.')
+    if len(markup_query) == 1:
+        markup_query.append(1)
+    markup_query = int(markup_query[-1])
+    keyboard = []
+    for i in range(0, len(genres[markup_query]), 2):
+        keyboard.append([InlineKeyboardButton(j, callback_data=j) for j in genres[markup_query][i:i + 2]])
+    next_previous = []
+    if markup_query != 1:
+        next_previous.append(InlineKeyboardButton('👈🏻', callback_data=f'list_of_genres.{markup_query - 1}'))
+    if markup_query != len(genres):
+        next_previous.append(InlineKeyboardButton('👉🏻', callback_data=f'list_of_genres.{markup_query + 1}'))
+    if next_previous:
+        keyboard.append(next_previous)
+    keyboard.append([InlineKeyboardButton('Назад', callback_data='search_by_genre')])
+    markup = InlineKeyboardMarkup(keyboard)
+    if context.user_data['message_type'] == 'text':
+        context.user_data['message'] = await context.bot.edit_message_text(text=f'Жанры:',
+                                                                           chat_id=context.user_data['chat_id'],
+                                                                           reply_markup=markup,
+                                                                           message_id=context.user_data[
+                                                                               'message'].message_id)
+    else:
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(text=f'Жанры:',
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=markup)
