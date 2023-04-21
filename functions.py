@@ -58,9 +58,10 @@ async def button(update, context):
             await search_film(query, context)
         if query.data == 'search_by_name':
             await search_by_name(query, context)
-        if query.data.startswith('search_by_name'):
-            await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': query.data.split('~')[1]},
-                         dlt=True)
+        if query.data.startswith('psearch_by_name'):
+            await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie',
+                                        params={'name': query.data.split('~')[1]},
+                                        dlt=True, list_of_films=True)
         if query.data == 'search_by_actor':
             await search_by_person(query, context, key=1)
         if query.data == 'search_by_director':
@@ -68,10 +69,11 @@ async def button(update, context):
         if query.data == 'search_by_genre':
             await search_by_genre(context)
         if query.data.startswith('search_by_id'):
-            await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'id': query.data.split('.')[1]},
-                         dlt=True)
+            await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie',
+                                        params={'id': query.data.split('.')[1]},
+                                        dlt=True)
         if query.data == 'random':
-            await random(context, 'https://api.kinopoisk.dev/v1/movie/random')
+            await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie/random')
         if query.data == 'start':
             await start(update, context)
         if query.data.split('.')[0] == 'add_to_watched':
@@ -90,13 +92,21 @@ async def button(update, context):
             await list_of_genres(query.data, context)
         if query.data.split('.')[0] == 'add_to_want_films':
             print(add_to_want_films(context.user_data['id'], context.user_data['username'], query.data.split('.')[1]))
+        if query.data.startswith('genre'):
+            await print_film_by_genre(context, params={'genres.name': query.data.split('.')[1]},
+                                      headers={"X-API-KEY": API_KEY})
+        if query.data.startswith('print_by_name'):
+            key = int(query.data.split('~')[1])
+            await universal_search_film(context, '', my_response=context.user_data['list_of_films'][key], dlt=True)
+        if query.data.startswith('print_films_by_name'):
+            await print_films_by_name(context, query.data, context.user_data['list_of_films'], context.user_data['names_of_films'])
 
     else:
         if 'query_data' in context.user_data:
             name = update.message.text
             if context.user_data['query_data'] == 'search_by_name':
                 print(context.user_data)
-                await random(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name})
+                await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name}, list_of_films=True)
             if context.user_data['query_data'] == 'search_by_actor':
                 print(context.user_data)
                 await print_films_by_person(context, 'print_films_by_person',
@@ -243,12 +253,19 @@ async def check_ok(context, ok, response, edit=False):
     return 1
 
 
-async def random(context, url, params=None, dlt=False):
-    response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
-    print(ok)
-    edit = True if 'random' in url else False
-    status = await check_ok(context, ok, response, edit=edit)
-    if not status: return 0
+async def universal_search_film(context, url, params=None, dlt=False, list_of_films=False, my_response=False):
+    if not my_response:
+        response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
+        edit = True if 'random' in url else False
+        status = await check_ok(context, ok, response, edit=edit)
+        if not status: return 0
+        if list_of_films:
+            print(7777777777777777777)
+            context.user_data['list_of_films'], context.user_data['names_of_films'] = get_data_list_of_films(response)
+            await print_films_by_name(context, 'search_by_name', context.user_data['list_of_films'], context.user_data['names_of_films'])
+            return 0
+    else:
+        response = my_response
     text, img, url_trailer, url_sources, id_film, title = parser_film(response)
     print(add_film_title_to_db(id_film, title))
     chat_id = context.user_data['chat_id']
@@ -265,9 +282,7 @@ async def random(context, url, params=None, dlt=False):
                         InlineKeyboardButton('➕Уже смотрел', callback_data=f'add_to_watched.{id_film}')])
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
                  url_sources.items()]] + keyboard if url_sources else keyboard
-    print(keyboard)
     markup = InlineKeyboardMarkup(keyboard)
-    print(context.user_data['message_type'])
     if context.user_data['message_type'] != 'media':
         context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
                                                                     reply_markup=markup,
@@ -281,7 +296,6 @@ async def random(context, url, params=None, dlt=False):
 
 
 def parser_film(response):
-    pprint(response)
     response = response['docs'][0] if 'docs' in response else response
     id_film = response['id']
     alt_name = response.get('alternativeName', '')
@@ -303,7 +317,6 @@ def parser_film(response):
             sources[source['name']] = source['url']
     persons = parser_person(response.get('persons', ''))
     persons_text = ''
-    pprint(persons)
     if rate_imdb and rate_imdb > 7:
         if persons:
             for k, v in persons.items():
@@ -319,8 +332,6 @@ def parser_film(response):
     text += description if len(text + description) <= 1024 else short_description if (short_description and len(
         text + short_description)) <= 1024 else ''
     while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
-    print(text)
-    print(len(text))
     return text, poster, url_trailer, sources, id_film, name
 
 
@@ -390,7 +401,6 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
                 if item['rating']:
                     names.append((item['nameRu'], float(item['rating'])))
         names.sort(key=lambda x: -x[1])
-        pprint(names)
         names = list(map(lambda x: x[0], names))
         context.user_data['films_by_enter'] = {}
         c = 1
@@ -398,11 +408,10 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
             context.user_data['films_by_enter'][c] = names[i:i + 8]
             c += 1
         query_data1.append(1)
-    print(context.user_data['films_by_enter'])
     keyboard = []
     markup_data = context.user_data['films_by_enter'][int(query_data1[-1])]
     for i in range(0, len(markup_data), 2):
-        keyboard.append([InlineKeyboardButton(name[:21], callback_data=f'search_by_name~{name[:20]}') for name in
+        keyboard.append([InlineKeyboardButton(name[:21], callback_data=f'psearch_by_name~{name[:20]}') for name in
                          markup_data[i:i + 2]])
     next_previous = []
     if int(query_data1[-1]) != 1:
@@ -416,7 +425,6 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
     keyboard.append([InlineKeyboardButton(f'🔄Другой {keys[key][0]}', callback_data=f'search_by_{keys[key][1].lower()}'),
                      InlineKeyboardButton('🔙Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
-    pprint(markup)
     if context.user_data['message_type'] == 'text_media':
         context.user_data['message'] = await context.bot.delete_message(chat_id=context.user_data['chat_id'],
                                                                         message_id=context.user_data[
@@ -459,7 +467,7 @@ async def print_film_by_genre(context, params=None, headers=None):
         await asyncio.sleep(1)
         await search_by_genre(context)
     else:
-        await random(context, 'https://api.kinopoisk.dev/v1/movie', params=params)
+        await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params=params)
 
 
 async def list_of_genres(query, context):
@@ -473,7 +481,7 @@ async def list_of_genres(query, context):
     markup_query = int(markup_query[-1])
     keyboard = []
     for i in range(0, len(genres[markup_query]), 2):
-        keyboard.append([InlineKeyboardButton(j, callback_data=j) for j in genres[markup_query][i:i + 2]])
+        keyboard.append([InlineKeyboardButton(j, callback_data=f"genre.{j}") for j in genres[markup_query][i:i + 2]])
     next_previous = []
     if markup_query != 1:
         next_previous.append(InlineKeyboardButton('👈🏻', callback_data=f'list_of_genres.{markup_query - 1}'))
@@ -492,5 +500,55 @@ async def list_of_genres(query, context):
     else:
         context.user_data['message_type'] = 'text'
         context.user_data['message'] = await context.bot.send_message(text=f'Жанры:',
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=markup)
+
+
+def get_data_list_of_films(response):
+    data = {}
+    names = {}
+    for line in response['docs']:
+        data[line['id']] = line
+        names[line['id']] = line['name']
+    return data, names
+
+
+async def print_films_by_name(context, query_data, films_data, dict_names):
+    names = list(dict_names.keys())
+    query_data1 = query_data.split('.')
+    if len(query_data1) == 1:
+        c = 1
+        context.user_data['film_by_name'] = {}
+        for i in range(0, len(names), 8):
+            context.user_data['film_by_name'][c] = names[i:i + 8]
+            c += 1
+        query_data1.append(1)
+    keyboard = []
+    markup_data = context.user_data['film_by_name'][int(query_data1[-1])]
+    for i in range(0, len(markup_data), 2):
+        keyboard.append([InlineKeyboardButton(dict_names[name][:21], callback_data=f'print_by_name~{name}') for name in
+                         markup_data[i:i + 2]])
+    next_previous = []
+    if int(query_data1[-1]) != 1:
+        next_previous.append(
+            InlineKeyboardButton('👈🏻', callback_data=f'print_films_by_name.{int(query_data1[-1]) - 1}'))
+    if int(query_data1[-1]) != len(context.user_data['film_by_name']):
+        next_previous.append(
+            InlineKeyboardButton('👉🏻', callback_data=f'print_films_by_name.{int(query_data1[-1]) + 1}'))
+    if next_previous:
+        keyboard.append(next_previous)
+    keyboard.append([InlineKeyboardButton(f'🔄Другое название', callback_data='search_by_name'),
+                     InlineKeyboardButton('🔙Назад', callback_data='search')])
+    markup = InlineKeyboardMarkup(keyboard)
+    pprint(markup)
+    if context.user_data['message_type'] == 'text':
+        context.user_data['message'] = await context.bot.edit_message_text(text=f'Результаты поиска:',
+                                                                           chat_id=context.user_data['chat_id'],
+                                                                           message_id=context.user_data[
+                                                                               'message'].message_id,
+                                                                           reply_markup=markup)
+    else:
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(text='Результаты поиска',
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=markup)
