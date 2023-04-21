@@ -22,11 +22,11 @@ async def start(update, context):
         context.user_data['username'] = update.message.from_user.username
         context.user_data['id'] = update.message.from_user.id
         print(register_user(context.user_data['id'], context.user_data['username']))
-    keyboard = [[InlineKeyboardButton("Поиск фильма", callback_data='search'),
-                 InlineKeyboardButton("Мой кабинет", callback_data='my_cabinet')],
-                [InlineKeyboardButton("Мои фильмы", callback_data='my_movies'),
+    keyboard = [[InlineKeyboardButton("🔎Поиск фильма", callback_data='search'),
+                 InlineKeyboardButton("🏚Мой кабинет", callback_data='my_cabinet')],
+                [InlineKeyboardButton("🎥Мои фильмы", callback_data='my_movies'),
                  InlineKeyboardButton("Подборки", callback_data='mixes')],
-                [InlineKeyboardButton("Рандом", callback_data='random')]
+                [InlineKeyboardButton("🎲Рандом", callback_data='random')]
                 ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -173,9 +173,9 @@ async def watch_later(query, context):
 
 async def cabinet(query, context):
     keyboard = [
-        [InlineKeyboardButton('Посмотреть позже', callback_data='watch_later.0'),
-         InlineKeyboardButton('Уже смотрел', callback_data='watch_later.1')],
-        [InlineKeyboardButton('Назад', callback_data='start')]]
+        [InlineKeyboardButton('➕Посмотреть позже', callback_data='watch_later.0'),
+         InlineKeyboardButton('✔️Уже смотрел', callback_data='watch_later.1')],
+        [InlineKeyboardButton('🔙Назад', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(
@@ -192,11 +192,11 @@ async def cabinet(query, context):
 
 
 async def search_film(query, context):
-    keyboard = [[InlineKeyboardButton('По названию', callback_data='search_by_name'),
-                 InlineKeyboardButton('По актёру', callback_data='search_by_actor')],
-                [InlineKeyboardButton('По режиссёру', callback_data='search_by_director'),
-                 InlineKeyboardButton('По жанру', callback_data='search_by_genre')],
-                [InlineKeyboardButton('Назад', callback_data='start')]]
+    keyboard = [[InlineKeyboardButton('📝По названию', callback_data='search_by_name'),
+                 InlineKeyboardButton('👨🏽‍🦱По актёру', callback_data='search_by_actor')],
+                [InlineKeyboardButton('👨🏼‍🦳По режиссёру', callback_data='search_by_director'),
+                 InlineKeyboardButton('🎭По жанру', callback_data='search_by_genre')],
+                [InlineKeyboardButton('🔙Назад', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(
@@ -226,7 +226,7 @@ async def check_ok(context, ok, response, edit=False):
         lines.append(line)
         with open('data/errors.txt', 'w', encoding='utf8') as file:
             file.writelines(lines)
-        keyboard = [[InlineKeyboardButton('Домой', callback_data='start')]]
+        keyboard = [[InlineKeyboardButton('🏚Домой', callback_data='start')]]
         markup = InlineKeyboardMarkup(keyboard)
         print(context.user_data['message_type'])
         if not edit:
@@ -246,7 +246,6 @@ async def check_ok(context, ok, response, edit=False):
 async def random(context, url, params=None, dlt=False):
     response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
     print(ok)
-    ok = 'False' if response.get('total', 0) == 0 else ok
     edit = True if 'random' in url else False
     status = await check_ok(context, ok, response, edit=edit)
     if not status: return 0
@@ -255,15 +254,15 @@ async def random(context, url, params=None, dlt=False):
     chat_id = context.user_data['chat_id']
     special_data = 'delete' if dlt else 'start'
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
-        keyboard = [[InlineKeyboardButton('Рандом', callback_data='random')],
-                    [InlineKeyboardButton('Назад', callback_data=special_data)]]
+        keyboard = [[InlineKeyboardButton('🎲Рандом', callback_data='random')],
+                    [InlineKeyboardButton('🔙Назад', callback_data=special_data)]]
     else:
-        keyboard = [[InlineKeyboardButton('Другое название', callback_data='search_by_name')],
-                    [InlineKeyboardButton('Назад', callback_data=special_data)]]
+        keyboard = [[InlineKeyboardButton('🔄Другое название', callback_data='search_by_name')],
+                    [InlineKeyboardButton('🔙Назад', callback_data=special_data)]]
 
-    keyboard[0] = [InlineKeyboardButton('Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
-    keyboard.insert(1, [InlineKeyboardButton('Посмотреть позже', callback_data=f'add_to_want_films.{id_film}'),
-                        InlineKeyboardButton('Уже смотрел', callback_data=f'add_to_watched.{id_film}')])
+    keyboard[0] = [InlineKeyboardButton('🎞Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
+    keyboard.insert(1, [InlineKeyboardButton('✔️Посмотреть позже', callback_data=f'add_to_want_films.{id_film}'),
+                        InlineKeyboardButton('➕Уже смотрел', callback_data=f'add_to_watched.{id_film}')])
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
                  url_sources.items()]] + keyboard if url_sources else keyboard
     print(keyboard)
@@ -317,7 +316,7 @@ def parser_film(response):
            f"<strong>жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
-    text += description if len(text + description) <= 1024 else short_description if (short_description and (
+    text += description if len(text + description) <= 1024 else short_description if (short_description and len(
                 text + short_description)) <= 1024 else ''
     while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
     print(text)
@@ -338,7 +337,7 @@ def parser_person(response):
 
 
 async def search_by_name(query, context):
-    keyboard = [[InlineKeyboardButton('Назад', callback_data='search')]]
+    keyboard = [[InlineKeyboardButton('🔙Назад', callback_data='search')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(text='Напишите название фильма',
@@ -355,7 +354,7 @@ async def search_by_name(query, context):
 
 async def search_by_person(query, context, key=1):
     keys = {1: 'актёра', 2: 'режиссёра'}
-    keyboard = [[InlineKeyboardButton('Назад', callback_data='search')]]
+    keyboard = [[InlineKeyboardButton('🔙Назад', callback_data='search')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(text=f'Напишите имя {keys[key]}',
@@ -375,7 +374,6 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
     keys = {1: ['актёр', 'ACTOR'], 2: ['режиссёр', 'DIRECTOR']}
     if len(query_data1) == 1:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
-        ok = 'False' if response.get('total', 0) == 0 else ok
         status = await check_ok(context, ok, response)
         if not status: return 0
         id = response['items'][0]['kinopoiskId']
@@ -384,7 +382,6 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
         context.user_data['name'] = response['items'][0]['nameRu']
         response, ok = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id),
                                           headers=headers)
-        ok = 'False' if response.get('total', 0) == 0 else ok
         status = await check_ok(context, ok, response)
         if not status: return 0
         names = []
@@ -410,14 +407,14 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
     next_previous = []
     if int(query_data1[-1]) != 1:
         next_previous.append(
-            InlineKeyboardButton('<', callback_data=f'print_films_by_person.{int(query_data1[-1]) - 1}'))
+            InlineKeyboardButton('👈🏻', callback_data=f'print_films_by_person.{int(query_data1[-1]) - 1}'))
     if int(query_data1[-1]) != len(context.user_data['films_by_enter']):
         next_previous.append(
-            InlineKeyboardButton('>', callback_data=f'print_films_by_person.{int(query_data1[-1]) + 1}'))
+            InlineKeyboardButton('👉🏻', callback_data=f'print_films_by_person.{int(query_data1[-1]) + 1}'))
     if next_previous:
         keyboard.append(next_previous)
-    keyboard.append([InlineKeyboardButton(f'Другой {keys[key][0]}', callback_data=f'search_by_{keys[key][1].lower()}'),
-                     InlineKeyboardButton('Назад', callback_data='search')])
+    keyboard.append([InlineKeyboardButton(f'🔄Другой {keys[key][0]}', callback_data=f'search_by_{keys[key][1].lower()}'),
+                     InlineKeyboardButton('🔙Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
     pprint(markup)
     if context.user_data['message_type'] == 'text_media':
@@ -433,8 +430,8 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
 
 
 async def search_by_genre(context):
-    keyboard = [[InlineKeyboardButton('Открыть список жанров', callback_data='list_of_genres')],
-                [InlineKeyboardButton('Назад', callback_data='search')]]
+    keyboard = [[InlineKeyboardButton('📂Открыть список жанров', callback_data='list_of_genres')],
+                [InlineKeyboardButton('🔙Назад', callback_data='search')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(text='Напишите название жанра',
