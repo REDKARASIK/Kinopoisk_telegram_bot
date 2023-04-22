@@ -24,8 +24,8 @@ async def start(update, context):
         print(register_user(context.user_data['id'], context.user_data['username']))
     keyboard = [[InlineKeyboardButton("🔎Поиск фильма", callback_data='search'),
                  InlineKeyboardButton("🏚Мой кабинет", callback_data='my_cabinet')],
-                [InlineKeyboardButton("🎥Мои фильмы", callback_data='my_movies'),
-                 InlineKeyboardButton("Подборки", callback_data='mixes')],
+                [InlineKeyboardButton("🎥Мои фильмы", callback_data='watch_later.1'),
+                 InlineKeyboardButton("🍿Кинопремьеры", callback_data='premiers')],
                 [InlineKeyboardButton("🎲Рандом", callback_data='random')]
                 ]
 
