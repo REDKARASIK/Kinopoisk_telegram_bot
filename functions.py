@@ -265,7 +265,8 @@ async def check_ok(context, ok, response, edit=False):
     return 1
 
 
-async def universal_search_film(context, url, params=None, dlt=False, list_of_films=False, my_response=False, data='name'):
+async def universal_search_film(context, url, params=None, dlt=False, list_of_films=False, my_response=False,
+                                data='name'):
     if not my_response:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
         edit = True if 'random' in url else False
@@ -494,7 +495,8 @@ async def print_film_by_genre(context, params=None, headers=None):
         await search_by_genre(context)
     else:
         params['limit'] = 32
-        await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params=params, list_of_films=True, data='genre')
+        await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params=params, list_of_films=True,
+                                    data='genre')
 
 
 async def list_of_genres(query, context):
@@ -539,7 +541,8 @@ def get_data_list_of_films(response):
     names = {}
     for line in response['docs']:
         data[line['id']] = line
-        names[line['id']] = line['name'] if line['name'] else line['enName'] if line['enName'] else line['alternativeName']
+        names[line['id']] = line['name'] if line['name'] else line['enName'] if line['enName'] else line[
+            'alternativeName']
     return data, names
 
 
@@ -559,7 +562,7 @@ async def print_films_by_name(context, query_data, films_data, dict_names):
     keyboard = []
     print(context.user_data['film_by_name'])
     print('\n', names)
-    print('\n', dict_names  )
+    print('\n', dict_names)
     markup_data = context.user_data['film_by_name'][int(query_data1[-1])]
     for i in range(0, len(markup_data), 2):
         keyboard.append([InlineKeyboardButton(dict_names[name][:21], callback_data=f'print_by_name~{name}') for name in
