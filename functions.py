@@ -347,7 +347,7 @@ def parser_film(response):
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
     text += description if len(text + description) <= 1024 else short_description if (
-                short_description and len(text + short_description) <= 1024) else ''
+            short_description and len(text + short_description) <= 1024) else ''
     while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
     return text, poster, url_trailer, sources, id_film, name
 
@@ -592,10 +592,12 @@ def get_status(film_id, chat_id):
     later = later[0][0].split(',') if later else []
     print(watched, later)
     keyboard[0] = InlineKeyboardButton('✔️Посмотреть позже',
-                                       callback_data=f'add_to_want_films.{film_id}') if str(film_id) not in later else InlineKeyboardButton(
+                                       callback_data=f'add_to_want_films.{film_id}') if str(film_id) not in later \
+        else InlineKeyboardButton(
         '⏳В ожидании просмотра', callback_data=f'add_to_want_films.{film_id}')
     keyboard[1] = InlineKeyboardButton('➕Уже смотрел',
-                                       callback_data=f'add_to_watched.{film_id}') if str(film_id) not in watched else InlineKeyboardButton(
+                                       callback_data=f'add_to_watched.{film_id}') if str(film_id) not in watched \
+        else InlineKeyboardButton(
         '✅Просмотрено', callback_data=f'add_to_watched.{film_id}')
 
     return keyboard
