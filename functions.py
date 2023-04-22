@@ -78,6 +78,8 @@ async def button(update, context):
             await start(update, context)
         if query.data.split('.')[0] == 'add_to_watched':
             print(add_to_watched(context.user_data['id'], context.user_data['username'], int(query.data.split('.')[1])))
+            await update_markup(context, context.user_data['message'].message_id, context.user_data['chat_id'],
+                                int(query.data.split('.')[1]))
         if query.data == 'my_cabinet':
             await cabinet(query, context)
         if query.data.split('.')[0] == 'watch_later':
@@ -92,6 +94,8 @@ async def button(update, context):
             await list_of_genres(query.data, context)
         if query.data.split('.')[0] == 'add_to_want_films':
             print(add_to_want_films(context.user_data['id'], context.user_data['username'], query.data.split('.')[1]))
+            await update_markup(context, context.user_data['message'].message_id, context.user_data['chat_id'],
+                                int(query.data.split('.')[1]))
         if query.data.startswith('genre'):
             await print_film_by_genre(context, params={'genres.name': query.data.split('.')[1]},
                                       headers={"X-API-KEY": API_KEY})
@@ -99,14 +103,16 @@ async def button(update, context):
             key = int(query.data.split('~')[1])
             await universal_search_film(context, '', my_response=context.user_data['list_of_films'][key], dlt=True)
         if query.data.startswith('print_films_by_name'):
-            await print_films_by_name(context, query.data, context.user_data['list_of_films'], context.user_data['names_of_films'])
+            await print_films_by_name(context, query.data, context.user_data['list_of_films'],
+                                      context.user_data['names_of_films'])
 
     else:
         if 'query_data' in context.user_data:
             name = update.message.text
             if context.user_data['query_data'] == 'search_by_name':
                 print(context.user_data)
-                await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name}, list_of_films=True)
+                await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name},
+                                            list_of_films=True)
             if context.user_data['query_data'] == 'search_by_actor':
                 print(context.user_data)
                 await print_films_by_person(context, 'print_films_by_person',
@@ -262,7 +268,8 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
         if list_of_films:
             print(7777777777777777777)
             context.user_data['list_of_films'], context.user_data['names_of_films'] = get_data_list_of_films(response)
-            await print_films_by_name(context, 'search_by_name', context.user_data['list_of_films'], context.user_data['names_of_films'])
+            await print_films_by_name(context, 'search_by_name', context.user_data['list_of_films'],
+                                      context.user_data['names_of_films'])
             return 0
     else:
         response = my_response
@@ -278,8 +285,7 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
                     [InlineKeyboardButton('🔙Назад', callback_data=special_data)]]
 
     keyboard[0] = [InlineKeyboardButton('🎞Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
-    keyboard.insert(1, [InlineKeyboardButton('✔️Посмотреть позже', callback_data=f'add_to_want_films.{id_film}'),
-                        InlineKeyboardButton('➕Уже смотрел', callback_data=f'add_to_watched.{id_film}')])
+    keyboard.insert(1, get_status(id_film, chat_id))
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
                  url_sources.items()]] + keyboard if url_sources else keyboard
     markup = InlineKeyboardMarkup(keyboard)
@@ -287,6 +293,9 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
         context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
                                                                     reply_markup=markup,
                                                                     parse_mode=types.ParseMode.HTML)
+        markup = context.user_data['message'].reply_markup
+        inline_keyboard = list(map(lambda x: list(x), list(markup.inline_keyboard)))
+        pprint(inline_keyboard)
         context.user_data['message_type'] = 'media'
     else:
         await context.bot.delete_message(chat_id, context.user_data['message'].message_id)
@@ -329,8 +338,8 @@ def parser_film(response):
            f"<strong>жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
-    text += description if len(text + description) <= 1024 else short_description if (short_description and len(
-        text + short_description)) <= 1024 else ''
+    text += description if len(text + description) <= 1024 else short_description if (
+                short_description and len(text + short_description) <= 1024) else ''
     while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
     return text, poster, url_trailer, sources, id_film, name
 
@@ -552,3 +561,36 @@ async def print_films_by_name(context, query_data, films_data, dict_names):
         context.user_data['message'] = await context.bot.send_message(text='Результаты поиска',
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=markup)
+
+
+def get_status(film_id, chat_id):
+    keyboard = [None, None]
+    pprint(get_all_watched(chat_id))
+    watched = get_all_watched(chat_id)
+    watched = watched[0][0].split(',') if watched else []
+    later = get_all_later(chat_id)
+    later = later[0][0].split(',') if later else []
+    print(watched, later)
+    keyboard[0] = InlineKeyboardButton('✔️Посмотреть позже',
+                                       callback_data=f'add_to_want_films.{film_id}') if str(film_id) not in later else InlineKeyboardButton(
+        '⏳В ожидании просмотра', callback_data=f'add_to_want_films.{film_id}')
+    keyboard[1] = InlineKeyboardButton('➕Уже смотрел',
+                                       callback_data=f'add_to_watched.{film_id}') if str(film_id) not in watched else InlineKeyboardButton(
+        '✅Просмотрено', callback_data=f'add_to_watched.{film_id}')
+
+    return keyboard
+
+
+async def update_markup(context, message_id, chat_id, film_id):
+    print('update_markup')
+    keyboard = get_status(film_id, chat_id)
+    markup = context.user_data['message'].reply_markup
+    inline_keyboard = list(map(lambda x: list(x), list(markup.inline_keyboard)))
+    inline_keyboard[-2] = keyboard
+    new_markup = InlineKeyboardMarkup(inline_keyboard)
+    print(markup == new_markup)
+    if markup != new_markup:
+        print('UPDATED')
+        context.user_data['message'] = await context.bot.edit_message_reply_markup(chat_id=chat_id,
+                                                                                   message_id=message_id,
+                                                                                   reply_markup=new_markup)
