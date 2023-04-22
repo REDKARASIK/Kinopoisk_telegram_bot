@@ -8,7 +8,7 @@ def add_to_want_films(chat_id, name_film, id_film):
     if result[0][3]:
         films = result[0][3].split(',')
         if str(id_film) not in films:
-            films.append(str(id_film))
+            films.insert(0, str(id_film))
             films = ','.join(films)
             params = (films,)
             cur.execute(f'update user set want_films = ? where chat_id = {int(chat_id)}', params)
@@ -91,7 +91,7 @@ def add_to_watched(id, name, id_film):
     if result[0][0]:
         films = result[0][0].split(',')
         if str(id_film) not in films:
-            films.append(str(id_film))
+            films.insert(0, str(id_film))
         else:
             if not flag:
                 index1 = films.index(str(id_film))

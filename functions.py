@@ -24,8 +24,8 @@ async def start(update, context):
         print(register_user(context.user_data['id'], context.user_data['username']))
     keyboard = [[InlineKeyboardButton("🔎Поиск фильма", callback_data='search'),
                  InlineKeyboardButton("🏚Мой кабинет", callback_data='my_cabinet')],
-                [InlineKeyboardButton("🎥Мои фильмы", callback_data='my_movies'),
-                 InlineKeyboardButton("Подборки", callback_data='mixes')],
+                [InlineKeyboardButton("🎥Мои фильмы", callback_data='watch_later.1'),
+                 InlineKeyboardButton("🍿Кинопремьеры", callback_data='premiers')],
                 [InlineKeyboardButton("🎲Рандом", callback_data='random')]
                 ]
 
@@ -541,7 +541,7 @@ def get_data_list_of_films(response):
         data[line['id']] = line
         names[line['id']] = line['name'] if line['name'] else line['enName'] if line['enName'] else line['alternativeName']
     return data, names
-aaaa
+
 
 async def print_films_by_name(context, query_data, films_data, dict_names):
     key = context.user_data['key']
@@ -603,12 +603,12 @@ def get_status(film_id, chat_id):
     later = later[0][0].split(',') if later else []
     print(watched, later)
     keyboard[0] = InlineKeyboardButton('✔️Посмотреть позже',
-                                       callback_data=f'add_to_want_films.{film_id}') if str(
-        film_id) not in later else InlineKeyboardButton(
+                                       callback_data=f'add_to_want_films.{film_id}') if str(film_id) not in later \
+        else InlineKeyboardButton(
         '⏳В ожидании просмотра', callback_data=f'add_to_want_films.{film_id}')
     keyboard[1] = InlineKeyboardButton('➕Уже смотрел',
-                                       callback_data=f'add_to_watched.{film_id}') if str(
-        film_id) not in watched else InlineKeyboardButton(
+                                       callback_data=f'add_to_watched.{film_id}') if str(film_id) not in watched \
+        else InlineKeyboardButton(
         '✅Просмотрено', callback_data=f'add_to_watched.{film_id}')
 
     return keyboard
