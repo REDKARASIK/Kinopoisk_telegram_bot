@@ -35,13 +35,15 @@ async def start(update, context):
     if context.user_data['message_type'] != 'text':
         context.user_data['message_type'] = 'text'
         context.user_data['message'] = await context.bot.send_message(text=
-                                                                      "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
+                                                                      "Добро пожаловать в стартовое меню бота.\n"
+                                                                      "Здесь вы можете найти нужную вам функцию.",
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=reply_markup)
     else:
         print(123, context.user_data['message_type'])
         context.user_data['message'] = await context.bot.edit_message_text(text=
-                                                                           "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
+                                                                           "Добро пожаловать в стартовое меню бота.\n"
+                                                                           "Здесь вы можете найти нужную вам функцию.",
                                                                            message_id=context.user_data[
                                                                                'message'].message_id,
                                                                            chat_id=context.user_data['chat_id'],
@@ -164,12 +166,16 @@ async def watch_later(query, context):
         next_previous = []
         if int(query_data[-1]) != 1:
             next_previous.append(
-                InlineKeyboardButton('<', callback_data=f'watch_later.{query_data[1]}.{int(query_data[-1]) - 1}'))
+                InlineKeyboardButton('👈🏻', callback_data=f'watch_later.{query_data[1]}.{int(query_data[-1]) - 1}'))
         if int(query_data[-1]) != len(context.user_data['dict_of_later_watch']):
             next_previous.append(
-                InlineKeyboardButton('>', callback_data=f'watch_later.{query_data[1]}.{int(query_data[-1]) + 1}'))
+                InlineKeyboardButton('👉🏻', callback_data=f'watch_later.{query_data[1]}.{int(query_data[-1]) + 1}'))
         if next_previous:
             keyboard.append(next_previous)
+            keyboard.append([InlineKeyboardButton('В начало', callback_data=f'watch_later.{query_data[1]}.{1}'),
+                             InlineKeyboardButton('В конец',
+                                                  callback_data=f'watch_later.{query_data[1]}.'
+                                                                f'{len(context.user_data["dict_of_later_watch"])}')])
     keyboard.append([InlineKeyboardButton('Назад', callback_data='my_cabinet')])
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
@@ -334,7 +340,9 @@ def parser_film(response):
         if persons:
             if persons['Режиссеры']: persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
             if persons['Актеры']: persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
-    text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong> {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} <strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
+    text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong>" \
+           f" {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} " \
+           f"<strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
            f"<strong>жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
@@ -431,7 +439,12 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
             InlineKeyboardButton('👉🏻', callback_data=f'print_films_by_person.{int(query_data1[-1]) + 1}'))
     if next_previous:
         keyboard.append(next_previous)
-    keyboard.append([InlineKeyboardButton(f'🔄Другой {keys[key][0]}', callback_data=f'search_by_{keys[key][1].lower()}'),
+        keyboard.append([InlineKeyboardButton('В начало', callback_data=f'print_films_by_person.{1}'),
+                         InlineKeyboardButton('В конец',
+                                              callback_data=f'print_films_by_person.'
+                                                            f'{len(context.user_data["films_by_enter"])}')])
+    keyboard.append([InlineKeyboardButton(f'🔄Другой {keys[key][0]}',
+                                          callback_data=f'search_by_{keys[key][1].lower()}'),
                      InlineKeyboardButton('🔙Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text_media':
@@ -498,6 +511,9 @@ async def list_of_genres(query, context):
         next_previous.append(InlineKeyboardButton('👉🏻', callback_data=f'list_of_genres.{markup_query + 1}'))
     if next_previous:
         keyboard.append(next_previous)
+        keyboard.append([InlineKeyboardButton('В начало', callback_data=f'list_of_genres.{1}'),
+                         InlineKeyboardButton('В конец',
+                                              callback_data=f'list_of_genres.{len(genres)}')])
     keyboard.append([InlineKeyboardButton('Назад', callback_data='search_by_genre')])
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
@@ -546,6 +562,10 @@ async def print_films_by_name(context, query_data, films_data, dict_names):
             InlineKeyboardButton('👉🏻', callback_data=f'print_films_by_name.{int(query_data1[-1]) + 1}'))
     if next_previous:
         keyboard.append(next_previous)
+        keyboard.append([InlineKeyboardButton('В начало', callback_data=f'print_films_by_name.{1}'),
+                         InlineKeyboardButton('В конец',
+                                              callback_data=f'print_films_by_name.'
+                                                            f'{len(context.user_data["film_by_name"])}')])
     keyboard.append([InlineKeyboardButton(f'🔄Другое название', callback_data='search_by_name'),
                      InlineKeyboardButton('🔙Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)

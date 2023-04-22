@@ -92,9 +92,10 @@ def add_to_watched(id, name, id_film):
         films = result[0][0].split(',')
         if str(id_film) not in films:
             films.append(str(id_film))
-        if not flag:
-            index1 = films.index(str(id_film))
-            del films[index1]
+        else:
+            if not flag:
+                index1 = films.index(str(id_film))
+                del films[index1]
         films = ','.join(films)
     else:
         films = f'{id_film}'
