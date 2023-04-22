@@ -15,7 +15,12 @@ def add_to_want_films(chat_id, name_film, id_film):
             db_file.commit()
             return 'add_to_want'
         else:
-            return 'already_add'
+            index1 = films.index(str(id_film))
+            del films[index1]
+            params = (','.join(films),)
+            cur.execute(f'update user set want_films = ? where chat_id = {int(chat_id)}', params)
+            db_file.commit()
+            return 'delete_from_want'
     else:
         params = (id_film,)
         cur.execute(f'update user set want_films = ? where chat_id = {int(chat_id)}', params)
@@ -87,6 +92,9 @@ def add_to_watched(id, name, id_film):
         films = result[0][0].split(',')
         if str(id_film) not in films:
             films.append(str(id_film))
+        if not flag:
+            index1 = films.index(str(id_film))
+            del films[index1]
         films = ','.join(films)
     else:
         films = f'{id_film}'
