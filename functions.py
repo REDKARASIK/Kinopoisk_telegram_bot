@@ -35,13 +35,15 @@ async def start(update, context):
     if context.user_data['message_type'] != 'text':
         context.user_data['message_type'] = 'text'
         context.user_data['message'] = await context.bot.send_message(text=
-                                                                      "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
+                                                                      "Добро пожаловать в стартовое меню бота.\n"
+                                                                      "Здесь вы можете найти нужную вам функцию.",
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=reply_markup)
     else:
         print(123, context.user_data['message_type'])
         context.user_data['message'] = await context.bot.edit_message_text(text=
-                                                                           "Добро пожаловать в стартовое меню бота.\nЗдесь вы можете найти нужную вам функцию.",
+                                                                           "Добро пожаловать в стартовое меню бота.\n"
+                                                                           "Здесь вы можете найти нужную вам функцию.",
                                                                            message_id=context.user_data[
                                                                                'message'].message_id,
                                                                            chat_id=context.user_data['chat_id'],
@@ -332,7 +334,9 @@ def parser_film(response):
         if persons:
             if persons['Режиссеры']: persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
             if persons['Актеры']: persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
-    text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong> {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} <strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
+    text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong>" \
+           f" {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} " \
+           f"<strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
            f"<strong>жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
@@ -433,7 +437,8 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
                          InlineKeyboardButton('В конец',
                                               callback_data=f'print_films_by_person.'
                                                             f'{len(context.user_data["films_by_enter"])}')])
-    keyboard.append([InlineKeyboardButton(f'🔄Другой {keys[key][0]}', callback_data=f'search_by_{keys[key][1].lower()}'),
+    keyboard.append([InlineKeyboardButton(f'🔄Другой {keys[key][0]}',
+                                          callback_data=f'search_by_{keys[key][1].lower()}'),
                      InlineKeyboardButton('🔙Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text_media':
