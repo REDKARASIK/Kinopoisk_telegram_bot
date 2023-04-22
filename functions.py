@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 from pprint import pprint
 
@@ -57,6 +58,10 @@ async def button(update, context):
         print(query.data)
         context.user_data['query_data'] = query.data
         if query.data == 'search':
+            if context.user_data['message_type'] == 'media':
+                context.user_data['message'] = await context.bot.delete_message(chat_id=context.user_data['chat_id'],
+                                                                                message_id=context.user_data[
+                                                                                    'message'].message_id)
             await search_film(query, context)
         if query.data == 'search_by_name':
             await search_by_name(query, context)
@@ -77,6 +82,10 @@ async def button(update, context):
         if query.data == 'random':
             await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie/random')
         if query.data == 'start':
+            if context.user_data['message_type'] == 'media':
+                context.user_data['message'] = await context.bot.delete_message(chat_id=context.user_data['chat_id'],
+                                                                                message_id=context.user_data[
+                                                                                    'message'].message_id)
             await start(update, context)
         if query.data.split('.')[0] == 'add_to_watched':
             print(add_to_watched(context.user_data['id'], context.user_data['username'], int(query.data.split('.')[1])))
@@ -107,6 +116,12 @@ async def button(update, context):
         if query.data.startswith('print_films_by_name'):
             await print_films_by_name(context, query.data, context.user_data['list_of_films'],
                                       context.user_data['names_of_films'])
+        if query.data == 'premiers':
+            delta = datetime.timedelta(days=30)
+            date1 = '.'.join(str(datetime.datetime.now().date()).split('-')[::-1])
+            date0 = '.'.join(str((datetime.datetime.now() - delta).date()).split('-')[::-1])
+            await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie',
+                                        params={'premiere.russia': f'{date0}-{date1}'}, list_of_films=True)
 
     else:
         if 'query_data' in context.user_data:
@@ -265,7 +280,8 @@ async def check_ok(context, ok, response, edit=False):
     return 1
 
 
-async def universal_search_film(context, url, params=None, dlt=False, list_of_films=False, my_response=False, data='name'):
+async def universal_search_film(context, url, params=None, dlt=False, list_of_films=False, my_response=False,
+                                data='name'):
     if not my_response:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
         edit = True if 'random' in url else False
@@ -452,15 +468,17 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
                      InlineKeyboardButton('🔙Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text_media':
-        context.user_data['message'] = await context.bot.delete_message(chat_id=context.user_data['chat_id'],
-                                                                        message_id=context.user_data[
-                                                                            'message'].message_id)
-    context.user_data['message_type'] = 'text_media'
-    context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'],
-                                                                context.user_data['photo'],
-                                                                caption=context.user_data['name'],
-                                                                reply_markup=markup,
-                                                                parse_mode=types.ParseMode.HTML)
+        context.user_data['message'] = await context.bot.edit_message_reply_markup(chat_id=context.user_data['chat_id'],
+                                                                                   message_id=context.user_data[
+                                                                                       'message'].message_id,
+                                                                                   reply_markup=markup)
+    else:
+        context.user_data['message_type'] = 'text_media'
+        context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'],
+                                                                    context.user_data['photo'],
+                                                                    caption=f'<strong>{context.user_data["name"]}</strong>',
+                                                                    reply_markup=markup,
+                                                                    parse_mode=types.ParseMode.HTML)
 
 
 async def search_by_genre(context):
@@ -494,7 +512,8 @@ async def print_film_by_genre(context, params=None, headers=None):
         await search_by_genre(context)
     else:
         params['limit'] = 32
-        await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params=params, list_of_films=True, data='genre')
+        await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params=params, list_of_films=True,
+                                    data='genre')
 
 
 async def list_of_genres(query, context):
@@ -539,7 +558,8 @@ def get_data_list_of_films(response):
     names = {}
     for line in response['docs']:
         data[line['id']] = line
-        names[line['id']] = line['name'] if line['name'] else line['enName'] if line['enName'] else line['alternativeName']
+        names[line['id']] = line['name'] if line['name'] else line['enName'] if line['enName'] else line[
+            'alternativeName']
     return data, names
 
 
@@ -559,7 +579,7 @@ async def print_films_by_name(context, query_data, films_data, dict_names):
     keyboard = []
     print(context.user_data['film_by_name'])
     print('\n', names)
-    print('\n', dict_names  )
+    print('\n', dict_names)
     markup_data = context.user_data['film_by_name'][int(query_data1[-1])]
     for i in range(0, len(markup_data), 2):
         keyboard.append([InlineKeyboardButton(dict_names[name][:21], callback_data=f'print_by_name~{name}') for name in
@@ -598,9 +618,9 @@ def get_status(film_id, chat_id):
     keyboard = [None, None]
     pprint(get_all_watched(chat_id))
     watched = get_all_watched(chat_id)
-    watched = watched[0][0].split(',') if watched else []
+    watched = watched[0][0].split(',') if watched[0][0] else []
     later = get_all_later(chat_id)
-    later = later[0][0].split(',') if later else []
+    later = later[0][0].split(',') if later[0][0] else []
     print(watched, later)
     keyboard[0] = InlineKeyboardButton('✔️Посмотреть позже',
                                        callback_data=f'add_to_want_films.{film_id}') if str(film_id) not in later \
