@@ -435,7 +435,7 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
         names = []
         for item in response['films']:
             if item['professionKey'] == keys[key][1]:
-                if item['rating']:
+                if item['rating'] and item['nameRu']:
                     names.append((item['nameRu'], float(item['rating'])))
         names.sort(key=lambda x: -x[1])
         names = list(map(lambda x: x[0], names))
