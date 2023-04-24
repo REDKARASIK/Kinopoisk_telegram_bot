@@ -5,6 +5,7 @@ import random
 from pprint import pprint
 
 import aiohttp
+import telegram.error
 from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -715,10 +716,18 @@ async def print_review(context, film_id):
                     text=f"<strong>{review['author']}\n{review['title']}\n{review['review']}</strong>",
                     chat_id=context.user_data['chat_id'], reply_markup=markup, parse_mode=types.ParseMode.HTML)
             else:
-                context.user_data['message'] = await context.bot.edit_message_text(
-                    text=f"<strong>{review['author']}\n{review['title']}\n{review['review']}</strong>",
-                    message_id=context.user_data['message'].message_id,
-                    chat_id=context.user_data['chat_id'], reply_markup=markup, parse_mode=types.ParseMode.HTML)
+                try:
+                    context.user_data['message'] = await context.bot.edit_message_text(
+                        text=f"<strong>{review['author']}\n{review['title']}\n{review['review']}</strong>",
+                        message_id=context.user_data['message'].message_id,
+                        chat_id=context.user_data['chat_id'], reply_markup=markup, parse_mode=types.ParseMode.HTML)
+                except telegram.error.BadRequest as error:
+                    context.user_data['message'] = await context.bot.edit_message_text(text='Больше нет отзывов',
+                                                                                       message_id=context.user_data[
+                                                                                           'message'].message_id,
+                                                                                       chat_id=context.user_data[
+                                                                                           'chat_id'],
+                                                                                       reply_markup=markup)
         else:
             context.user_data['message'] = await context.bot.send_message(text='Нет отзывов',
                                                                           chat_id=context.user_data['chat_id'],
