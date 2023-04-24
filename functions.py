@@ -7,6 +7,7 @@ from pprint import pprint
 import aiohttp
 from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+import telegram
 
 from config import API_KEY, API_KEY_2
 from db_functions import *
@@ -94,6 +95,8 @@ async def button(update, context):
                                 int(query.data.split('.')[1]))
         if query.data == 'my_cabinet':
             await cabinet(query, context)
+        if query.data == 'donation':
+            await donation(query, context)
         if query.data.split('.')[0] == 'watch_later':
             await watch_later(query, context)
         if query.data.split('.')[0] == 'print_films_by_person':
@@ -153,6 +156,25 @@ async def button(update, context):
             del context.user_data['query_data']
 
 
+async def donation(query, context):
+    markup = [[InlineKeyboardButton('🔙Назад', callback_data='my_cabinet')]]
+    if context.user_data['message_type'] == 'text':
+        context.user_data['message'] = await context.bot.edit_message_text(
+            text=f'Поддержать нас вы можете с помощью перевода на карту\.\n'
+                 f'Номер карты: `2202206135921562`\n'
+                 f'Заранее благодарим за поддержку\!',
+            chat_id=context.user_data['chat_id'],
+            message_id=context.user_data[
+                'message'].message_id, parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+    else:
+        context.user_data['message_type'] = 'text'
+        context.user_data['message'] = await context.bot.send_message(
+            text=f'Поддержать нас вы можете с помощью перевода на карту\.\n'
+                 f'Номер карты: `2202206135921562`\n'
+                 f'Заранее благодарим за поддержку\!',
+            chat_id=context.user_data['chat_id'], parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+
+
 async def watch_later(query, context):
     query_data = query.data.split('.')
     if query_data[1] == '0':
@@ -196,7 +218,7 @@ async def watch_later(query, context):
                              InlineKeyboardButton('В конец',
                                                   callback_data=f'watch_later.{query_data[1]}.'
                                                                 f'{len(context.user_data["dict_of_later_watch"])}')])
-    keyboard.append([InlineKeyboardButton('Назад', callback_data='my_cabinet')])
+    keyboard.append([InlineKeyboardButton('🔙Назад', callback_data='my_cabinet')])
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(
@@ -217,6 +239,7 @@ async def cabinet(query, context):
     keyboard = [
         [InlineKeyboardButton('➕Посмотреть позже', callback_data='watch_later.0'),
          InlineKeyboardButton('✔️Уже смотрел', callback_data='watch_later.1')],
+        [InlineKeyboardButton('Поддержать авторов', callback_data='donation')],
         [InlineKeyboardButton('🔙Назад', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
