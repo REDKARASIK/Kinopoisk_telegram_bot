@@ -5,10 +5,10 @@ import random
 from pprint import pprint
 
 import aiohttp
+import telegram
 import telegram.error
 from aiogram import types
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-import telegram
 
 from config import API_KEY, API_KEY_2
 from db_functions import *
@@ -163,7 +163,8 @@ async def button(update, context):
 
 
 async def donation(query, context):
-    markup = [[InlineKeyboardButton('🔙Назад', callback_data='my_cabinet')]]
+    keyboard = [[InlineKeyboardButton('🔙Назад', callback_data='my_cabinet')]]
+    markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(
             text=f'Поддержать нас вы можете с помощью перевода на карту\.\n'
@@ -171,14 +172,15 @@ async def donation(query, context):
                  f'Заранее благодарим за поддержку\!',
             chat_id=context.user_data['chat_id'],
             message_id=context.user_data[
-                'message'].message_id, parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+                'message'].message_id, parse_mode=telegram.constants.ParseMode.MARKDOWN_V2, reply_markup=markup)
     else:
         context.user_data['message_type'] = 'text'
         context.user_data['message'] = await context.bot.send_message(
             text=f'Поддержать нас вы можете с помощью перевода на карту\.\n'
                  f'Номер карты \(СБЕР\): `2202206135921562`\n'
                  f'Заранее благодарим за поддержку\!',
-            chat_id=context.user_data['chat_id'], parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+            chat_id=context.user_data['chat_id'], parse_mode=telegram.constants.ParseMode.MARKDOWN_V2,
+            reply_markup=markup)
 
 
 async def watch_later(query, context):
