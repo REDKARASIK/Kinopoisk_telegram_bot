@@ -312,11 +312,11 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
         keyboard = [[InlineKeyboardButton('🎲Рандом', callback_data='random')],
                     [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')],
-                     [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
+                    [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
     else:
         keyboard = [[InlineKeyboardButton('🔄Другое название', callback_data='search_by_name')],
                     [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')],
-                     [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
+                    [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
 
     keyboard[0] = [InlineKeyboardButton('🎞Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard.insert(1, get_status(id_film, chat_id))
@@ -485,7 +485,8 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
         context.user_data['message_type'] = 'text_media'
         context.user_data['message'] = await context.bot.send_photo(context.user_data['chat_id'],
                                                                     context.user_data['photo'],
-                                                                    caption=f'<strong>{context.user_data["name"]}</strong>',
+                                                                    caption=f'<strong>{context.user_data["name"]}'
+                                                                            f'</strong>',
                                                                     reply_markup=markup,
                                                                     parse_mode=types.ParseMode.HTML)
 
@@ -665,7 +666,8 @@ async def print_awards(context, film_id):
     markup = InlineKeyboardMarkup(keyboard)
     response = response[0]
     if response['total'] == 0:
-        context.user_data['message'] = await context.bot.send_message(text='Нет наград', reply_markup=markup)
+        context.user_data['message'] = await context.bot.send_message(text='Нет наград', reply_markup=markup,
+                                                                      chat_id=context.user_data['chat_id'])
     else:
         awards = response['docs']
         text = ''

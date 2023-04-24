@@ -1,7 +1,6 @@
 import logging
 from functions import *
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackQueryHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from config import BOT_TOKEN
 
 logging.basicConfig(
