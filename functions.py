@@ -101,9 +101,11 @@ async def button(update, context):
             await watch_later(query, context)
         if query.data.split('.')[0] == 'print_films_by_person':
             await print_films_by_person(context, query.data, None)
-        if query.data == 'delete':
+        if query.data.startswith('delete'):
+            message_id = context.user_data['message'].message_id if len(query.data.split('.')) == 1 else \
+                context.user_data['deleting_id']
             await context.bot.delete_message(chat_id=context.user_data['chat_id'],
-                                             message_id=context.user_data['message'].message_id)
+                                             message_id=message_id)
             context.user_data['message_type'] = 'text_media'
         if query.data.split('.')[0] == 'list_of_genres':
             await list_of_genres(query.data, context)
@@ -130,7 +132,10 @@ async def button(update, context):
             await print_awards(context, query.data.split('.')[1])
         if query.data.startswith('review'):
             await print_review(context, query.data.split('.')[1])
-
+        if query.data.startswith('fact'):
+            await print_facts(context, query.data.split('.')[1], 'FACT')
+        if query.data.startswith('blooper'):
+            await print_facts(context, query.data.split('.')[1], 'BLOOPER')
     else:
         if 'query_data' in context.user_data:
             name = update.message.text
@@ -331,15 +336,14 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
     text, img, url_trailer, url_sources, id_film, title = parser_film(response)
     print(add_film_title_to_db(id_film, title))
     chat_id = context.user_data['chat_id']
-    special_data = 'delete' if dlt else 'start'
-    if url == 'https://api.kinopoisk.dev/v1/movie/random':
-        keyboard = [[InlineKeyboardButton('🎲Рандом', callback_data='random')],
-                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')],
-                    [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
-    else:
-        keyboard = [[InlineKeyboardButton('🔄Другое название', callback_data='search_by_name')],
-                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')],
-                    [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
+    special_data = 'delete.1' if dlt else 'start'
+    keyboard = [[InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}'),
+                 InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}'),
+                 InlineKeyboardButton('💥Факты', callback_data=f'fact.{id_film}'),
+                 InlineKeyboardButton('❗️Ошибки', callback_data=f'blooper.{id_film}')]]
+    keyboard.insert(0, [InlineKeyboardButton('🎲Рандом',
+                                             callback_data='random')] if url == 'https://api.kinopoisk.dev/v1/movie/random' else [
+        InlineKeyboardButton('🔄Другое название', callback_data='search_by_name')])
 
     keyboard[0] = [InlineKeyboardButton('🎞Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard.insert(1, get_status(id_film, chat_id))
@@ -355,11 +359,13 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
         inline_keyboard = list(map(lambda x: list(x), list(markup.inline_keyboard)))
         pprint(inline_keyboard)
         context.user_data['message_type'] = 'media'
+        context.user_data['deleting_id'] = context.user_data['message'].message_id
     else:
         await context.bot.delete_message(chat_id, context.user_data['message'].message_id)
         context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
                                                                     reply_markup=markup,
                                                                     parse_mode=types.ParseMode.HTML)
+        context.user_data['deleting_id'] = context.user_data['message'].message_id
 
 
 def parser_film(response):
@@ -712,7 +718,9 @@ async def print_review(context, film_id):
     markup = InlineKeyboardMarkup(keyboard)
     response = response[0]
     if response['total'] == 0:
-        context.user_data['message'] = await context.bot.send_message(text='Нет отзывов', reply_markup=markup)
+        context.user_data['message'] = await context.bot.send_message(text='Нет отзывов',
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=markup)
     else:
         docs = response['docs']
         reviews = []
@@ -735,4 +743,47 @@ async def print_review(context, film_id):
                     message_id=context.user_data['message'].message_id,
                     chat_id=context.user_data['chat_id'], reply_markup=markup, parse_mode=types.ParseMode.HTML)
         else:
-            context.user_data['message'] = await context.bot.send_message(text='Нет отзывов', reply_markup=markup)
+            context.user_data['message'] = await context.bot.send_message(text='Нет отзывов',
+                                                                          chat_id=context.user_data['chat_id'],
+                                                                          reply_markup=markup)
+
+
+async def print_facts(context, film_id, key):
+    word = {'FACT': ['фактов', '<strong>ФАКТЫ</strong>\n'], 'BLOOPER': ['ошибок', '<strong>ОШИБКИ</strong>\n']}
+    response = await get_response(f'https://kinopoiskapiunofficial.tech/api/v2.2/films/{film_id}/facts',
+                                  headers={'X-API-KEY': API_KEY_2})
+    response = response[0]
+    keyboard = [[InlineKeyboardButton('🔙Назад', callback_data='delete')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    if response['total'] == 0:
+        context.user_data['message'] = await context.bot.send_message(text=f'Нет {word[key][0]}',
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      reply_markup=markup)
+    else:
+        text = word[key][1]
+        num = 1
+        for fact in response['items']:
+            if not fact['spoiler'] and fact['type'] == key:
+                if len(text + fact['text']) <= 1024:
+                    text += f"{num}. {fact['text']}\n"
+                    num += 1
+                else:
+                    break
+        if text:
+            if context.user_data['message_type'] != 'text':
+                context.user_data['message_type'] = 'text'
+                context.user_data['message'] = await context.bot.send_message(text=text,
+                                                                              chat_id=context.user_data['chat_id'],
+                                                                              reply_markup=markup,
+                                                                              parse_mode=types.ParseMode.HTML)
+            else:
+                context.user_data['message'] = await context.bot.edit_message_text(text=text,
+                                                                                   chat_id=context.user_data['chat_id'],
+                                                                                   message_id=context.user_data[
+                                                                                       'message'].message_id,
+                                                                                   reply_markup=markup,
+                                                                                   parse_mode=types.ParseMode.HTML)
+        else:
+            context.user_data['message'] = await context.bot.send_message(text=f'Нет {word[key][0]}',
+                                                                          chat_id=context.user_data['chat_id'],
+                                                                          reply_markup=markup)
