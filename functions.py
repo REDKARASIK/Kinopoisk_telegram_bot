@@ -255,7 +255,8 @@ async def get_response(url, params=None, headers=None):
 
 
 async def check_ok(context, ok, response, edit=False):
-    if ok == 'False':
+    print(response)
+    if ok == 'False' or response.get('total', 0) == 0:
         user_id, name, chat_id, message_id = context.user_data['id'], context.user_data['username'], context.user_data[
             'chat_id'], context.user_data['message'].message_id
         lines = open('data/errors.txt', 'r', encoding='utf8').readlines()
