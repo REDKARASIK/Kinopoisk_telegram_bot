@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import random
 from pprint import pprint
 
 import aiohttp
@@ -124,6 +125,8 @@ async def button(update, context):
                                         params={'premiere.russia': f'{date0}-{date1}'}, list_of_films=True)
         if query.data.startswith('awards'):
             await print_awards(context, query.data.split('.')[1])
+        if query.data.startswith('review'):
+            await print_review(context, query.data.split('.')[1])
 
     else:
         if 'query_data' in context.user_data:
@@ -256,9 +259,9 @@ async def get_response(url, params=None, headers=None):
             return await resp.json(), str(resp.ok)
 
 
-async def check_ok(context, ok, response, edit=False):
+async def check_ok(context, ok, response, url, edit=False):
     print(response)
-    if ok == 'False' or response.get('total', 0) == 0:
+    if ok == 'False' or response.get('total', 0) == 0 and 'random' not in url:
         user_id, name, chat_id, message_id = context.user_data['id'], context.user_data['username'], context.user_data[
             'chat_id'], context.user_data['message'].message_id
         lines = open('data/errors.txt', 'r', encoding='utf8').readlines()
@@ -288,7 +291,7 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
     if not my_response:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
         edit = True if 'random' in url else False
-        status = await check_ok(context, ok, response, edit=edit)
+        status = await check_ok(context, ok, response, url, edit=edit)
         if not status: return 0
         if list_of_films:
             context.user_data['list_of_films'], context.user_data['names_of_films'] = get_data_list_of_films(response)
@@ -308,10 +311,12 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
     special_data = 'delete' if dlt else 'start'
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
         keyboard = [[InlineKeyboardButton('🎲Рандом', callback_data='random')],
-                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')]]
+                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')],
+                     [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
     else:
         keyboard = [[InlineKeyboardButton('🔄Другое название', callback_data='search_by_name')],
-                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')]]
+                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')],
+                     [InlineKeyboardButton('💬Отзывы', callback_data=f'review.{id_film}')]]
 
     keyboard[0] = [InlineKeyboardButton('🎞Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard.insert(1, get_status(id_film, chat_id))
@@ -426,7 +431,7 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
     keys = {1: ['актёр', 'ACTOR'], 2: ['режиссёр', 'DIRECTOR']}
     if len(query_data1) == 1:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
-        status = await check_ok(context, ok, response)
+        status = await check_ok(context, ok, response, url)
         if not status: return 0
         id = response['items'][0]['kinopoiskId']
         img = response['items'][0]['posterUrl']
@@ -434,7 +439,7 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
         context.user_data['name'] = response['items'][0]['nameRu']
         response, ok = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id),
                                           headers=headers)
-        status = await check_ok(context, ok, response)
+        status = await check_ok(context, ok, response, url)
         if not status: return 0
         names = []
         for item in response['films']:
@@ -672,3 +677,37 @@ async def print_awards(context, film_id):
         context.user_data['message'] = await context.bot.send_message(text=text, reply_markup=markup,
                                                                       chat_id=context.user_data['chat_id'],
                                                                       parse_mode=types.ParseMode.HTML)
+
+
+async def print_review(context, film_id):
+    response = await get_response('https://api.kinopoisk.dev/v1/review', headers={'X-API-KEY': API_KEY},
+                                  params={'movieId': int(film_id), 'limit': 100})
+    keyboard = [[InlineKeyboardButton('🆕Ещё', callback_data=f'review.{film_id}'),
+                 InlineKeyboardButton('🔙Назад', callback_data='delete')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    response = response[0]
+    if response['total'] == 0:
+        context.user_data['message'] = await context.bot.send_message(text='Нет отзывов', reply_markup=markup)
+    else:
+        docs = response['docs']
+        reviews = []
+        for data in docs:
+            author = data['author'] if data['author'] else ''
+            title = data['title'] if data['title'] else ''
+            review = data['review'] if data['review'] else ''
+            reviews.append({'author': author, 'title': title, 'review': review})
+        reviews = list(filter(lambda x: len(x['author'] + x['title'] + x['review']) <= 1024, reviews))
+        if reviews:
+            review = random.choice(reviews)
+            if context.user_data['message_type'] != 'text':
+                context.user_data['message_type'] = 'text'
+                context.user_data['message'] = await context.bot.send_message(
+                    text=f"<strong>{review['author']}\n{review['title']}\n{review['review']}</strong>",
+                    chat_id=context.user_data['chat_id'], reply_markup=markup, parse_mode=types.ParseMode.HTML)
+            else:
+                context.user_data['message'] = await context.bot.edit_message_text(
+                    text=f"<strong>{review['author']}\n{review['title']}\n{review['review']}</strong>",
+                    message_id=context.user_data['message'].message_id,
+                    chat_id=context.user_data['chat_id'], reply_markup=markup, parse_mode=types.ParseMode.HTML)
+        else:
+            context.user_data['message'] = await context.bot.send_message(text='Нет отзывов', reply_markup=markup)
