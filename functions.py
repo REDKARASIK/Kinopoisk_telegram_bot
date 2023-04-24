@@ -166,7 +166,7 @@ async def donation(query, context):
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(
             text=f'Поддержать нас вы можете с помощью перевода на карту\.\n'
-                 f'Номер карты: `2202206135921562`\n'
+                 f'Номер карты \(СБЕР\): `2202206135921562`\n'
                  f'Заранее благодарим за поддержку\!',
             chat_id=context.user_data['chat_id'],
             message_id=context.user_data[
@@ -175,7 +175,7 @@ async def donation(query, context):
         context.user_data['message_type'] = 'text'
         context.user_data['message'] = await context.bot.send_message(
             text=f'Поддержать нас вы можете с помощью перевода на карту\.\n'
-                 f'Номер карты: `2202206135921562`\n'
+                 f'Номер карты \(СБЕР\): `2202206135921562`\n'
                  f'Заранее благодарим за поддержку\!',
             chat_id=context.user_data['chat_id'], parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
