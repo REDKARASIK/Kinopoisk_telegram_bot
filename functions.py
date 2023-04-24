@@ -122,6 +122,8 @@ async def button(update, context):
             date0 = '.'.join(str((datetime.datetime.now() - delta).date()).split('-')[::-1])
             await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie',
                                         params={'premiere.russia': f'{date0}-{date1}'}, list_of_films=True)
+        if query.data.startswith('awards'):
+            await print_awards(context, query.data.split('.')[1])
 
     else:
         if 'query_data' in context.user_data:
@@ -306,15 +308,16 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
     special_data = 'delete' if dlt else 'start'
     if url == 'https://api.kinopoisk.dev/v1/movie/random':
         keyboard = [[InlineKeyboardButton('🎲Рандом', callback_data='random')],
-                    [InlineKeyboardButton('🔙Назад', callback_data=special_data)]]
+                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')]]
     else:
         keyboard = [[InlineKeyboardButton('🔄Другое название', callback_data='search_by_name')],
-                    [InlineKeyboardButton('🔙Назад', callback_data=special_data)]]
+                    [InlineKeyboardButton('🏆Награды', callback_data=f'awards.{id_film}')]]
 
     keyboard[0] = [InlineKeyboardButton('🎞Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
     keyboard.insert(1, get_status(id_film, chat_id))
     keyboard = [[InlineKeyboardButton(text=k, url=v) for k, v in
                  url_sources.items()]] + keyboard if url_sources else keyboard
+    keyboard.append([InlineKeyboardButton('🔙Назад', callback_data=special_data)])
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] != 'media':
         context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
@@ -648,3 +651,24 @@ async def update_markup(context, message_id, chat_id, film_id):
         context.user_data['message'] = await context.bot.edit_message_reply_markup(chat_id=chat_id,
                                                                                    message_id=message_id,
                                                                                    reply_markup=new_markup)
+
+
+async def print_awards(context, film_id):
+    response = await get_response('https://api.kinopoisk.dev/v1.1/movie/awards', headers={'X-API-KEY': API_KEY},
+                                  params={'movieId': int(film_id)})
+    keyboard = [[InlineKeyboardButton('🔙Назад', callback_data='delete')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    response = response[0]
+    if response['total'] == 0:
+        context.user_data['message'] = await context.bot.send_message(text='Нет наград', reply_markup=markup)
+    else:
+        awards = response['docs']
+        text = ''
+        for line in awards:
+            who, when = line['nomination']['award']['title'], line['nomination']['award']['year']
+            nomination = line['nomination']['title']
+            win = 'Победа' if line['winning'] else 'Номинация'
+            text += f"<strong>{who} - {when}</strong>: {nomination} <strong>({win})</strong>\n"
+        context.user_data['message'] = await context.bot.send_message(text=text, reply_markup=markup,
+                                                                      chat_id=context.user_data['chat_id'],
+                                                                      parse_mode=types.ParseMode.HTML)
