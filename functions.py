@@ -35,7 +35,6 @@ async def start(update, context):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     if 'message_type' not in context.user_data: context.user_data['message_type'] = ' '
-    print(context.user_data['message_type'])
     if context.user_data['message_type'] != 'text':
         context.user_data['message_type'] = 'text'
         context.user_data['message'] = await context.bot.send_message(text=
@@ -44,7 +43,6 @@ async def start(update, context):
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=reply_markup)
     else:
-        print(123, context.user_data['message_type'])
         context.user_data['message'] = await context.bot.edit_message_text(text=
                                                                            "Добро пожаловать в стартовое меню бота.\n"
                                                                            "Здесь вы можете найти нужную вам функцию.",
@@ -58,7 +56,6 @@ async def button(update, context):
     if update.callback_query:
         query = update.callback_query
         await query.answer()
-        print(query.data)
         context.user_data['query_data'] = query.data
         if query.data == 'search':
             if context.user_data['message_type'] == 'media':
@@ -141,17 +138,14 @@ async def button(update, context):
         if 'query_data' in context.user_data:
             name = update.message.text
             if context.user_data['query_data'] == 'search_by_name':
-                print(context.user_data)
                 await universal_search_film(context, 'https://api.kinopoisk.dev/v1/movie', params={'name': name},
                                             list_of_films=True)
             if context.user_data['query_data'] == 'search_by_actor':
-                print(context.user_data)
                 await print_films_by_person(context, 'print_films_by_person',
                                             'https://kinopoiskapiunofficial.tech/api/v1/persons',
                                             params={'name': name},
                                             headers={"X-API-KEY": API_KEY_2}, key=1)
             if context.user_data['query_data'] == 'search_by_director':
-                print(context.user_data)
                 await print_films_by_person(context, 'print_films_by_person',
                                             'https://kinopoiskapiunofficial.tech/api/v1/persons',
                                             params={'name': name},
@@ -206,8 +200,6 @@ async def watch_later(query, context):
                 c += 1
             query_data.append(1)
         markup_data = context.user_data['dict_of_later_watch'][int(query_data[-1])]
-        print(markup_data)
-        print(context.user_data['dict_of_later_watch'])
         for i in range(0, len(markup_data), 2):
             keyboard.append(
                 [InlineKeyboardButton(context.user_data["dict_films"][int(i)], callback_data=f'search_by_id.{i}') for i
@@ -291,8 +283,7 @@ async def get_response(url, params=None, headers=None):
 
 
 async def check_ok(context, ok, response, url, edit=False):
-    print(response)
-    if ok == 'False' or response.get('total', 0) == 0 and 'random' not in url:
+    if ok == 'False' or (response.get('total', 0) == 0 and 'random' not in url and 'staff' not in url):
         user_id, name, chat_id, message_id = context.user_data['id'], context.user_data['username'], context.user_data[
             'chat_id'], context.user_data['message'].message_id
         lines = open('data/errors.txt', 'r', encoding='utf8').readlines()
@@ -302,7 +293,6 @@ async def check_ok(context, ok, response, url, edit=False):
             file.writelines(lines)
         keyboard = [[InlineKeyboardButton('🏚Домой', callback_data='start')]]
         markup = InlineKeyboardMarkup(keyboard)
-        print(context.user_data['message_type'])
         if not edit:
             context.user_data['message_type'] = 'text'
             context.user_data['message'] = await context.bot.send_message(
@@ -360,7 +350,6 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
                                                                     parse_mode=types.ParseMode.HTML)
         markup = context.user_data['message'].reply_markup
         inline_keyboard = list(map(lambda x: list(x), list(markup.inline_keyboard)))
-        pprint(inline_keyboard)
         context.user_data['message_type'] = 'media'
         context.user_data['deleting_id'] = context.user_data['message'].message_id
     else:
@@ -469,8 +458,8 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
         img = response['items'][0]['posterUrl']
         context.user_data['photo'] = img
         context.user_data['name'] = response['items'][0]['nameRu']
-        response, ok = await get_response('https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id),
-                                          headers=headers)
+        url = 'https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id)
+        response, ok = await get_response(url, headers=headers)
         status = await check_ok(context, ok, response, url)
         if not status: return 0
         names = []
@@ -619,9 +608,6 @@ async def print_films_by_name(context, query_data, films_data, dict_names):
             c += 1
         query_data1.append(1)
     keyboard = []
-    print(context.user_data['film_by_name'])
-    print('\n', names)
-    print('\n', dict_names)
     markup_data = context.user_data['film_by_name'][int(query_data1[-1])]
     for i in range(0, len(markup_data), 2):
         keyboard.append([InlineKeyboardButton(dict_names[name][:21], callback_data=f'print_by_name~{name}') for name in
@@ -642,7 +628,6 @@ async def print_films_by_name(context, query_data, films_data, dict_names):
     keyboard.append([InlineKeyboardButton(f'🔄{keys[key][3]}', callback_data=keys[key][2]),
                      InlineKeyboardButton('🔙Назад', callback_data='search')])
     markup = InlineKeyboardMarkup(keyboard)
-    pprint(markup)
     if context.user_data['message_type'] == 'text':
         context.user_data['message'] = await context.bot.edit_message_text(text=f'Результаты поиска:',
                                                                            chat_id=context.user_data['chat_id'],
@@ -658,12 +643,10 @@ async def print_films_by_name(context, query_data, films_data, dict_names):
 
 def get_status(film_id, chat_id):
     keyboard = [None, None]
-    pprint(get_all_watched(chat_id))
     watched = get_all_watched(chat_id)
     watched = watched[0][0].split(',') if watched[0][0] else []
     later = get_all_later(chat_id)
     later = later[0][0].split(',') if later[0][0] else []
-    print(watched, later)
     keyboard[0] = InlineKeyboardButton('✔️Посмотреть позже',
                                        callback_data=f'add_to_want_films.{film_id}') if str(film_id) not in later \
         else InlineKeyboardButton(
@@ -677,15 +660,12 @@ def get_status(film_id, chat_id):
 
 
 async def update_markup(context, message_id, chat_id, film_id):
-    print('update_markup')
     keyboard = get_status(film_id, chat_id)
     markup = context.user_data['message'].reply_markup
     inline_keyboard = list(map(lambda x: list(x), list(markup.inline_keyboard)))
-    inline_keyboard[-2] = keyboard
+    inline_keyboard[-3] = keyboard
     new_markup = InlineKeyboardMarkup(inline_keyboard)
-    print(markup == new_markup)
     if markup != new_markup:
-        print('UPDATED')
         context.user_data['message'] = await context.bot.edit_message_reply_markup(chat_id=chat_id,
                                                                                    message_id=message_id,
                                                                                    reply_markup=new_markup)
