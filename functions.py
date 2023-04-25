@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import logging
 import random
-from pprint import pprint
 
 import aiohttp
 import telegram
@@ -18,6 +17,14 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+async def bot_help(update, context):
+    keyboard = [[InlineKeyboardButton('🚩В главное меню', callback_data='start')]]
+    markup = InlineKeyboardMarkup(keyboard)
+    context.user_data['message'] = await context.bot.send_message(
+        text='Благодаря нашему боту Ваше общение с киноиндустрией станет гораздо приятнее.\nОперативный поиск фильмов и многой информации для них.\nБудем рады Вам!',
+        chat_id=context.user_data['chat_id'], reply_markup=markup)
 
 
 async def start(update, context):
