@@ -47,18 +47,17 @@ async def start(update, context):
                  InlineKeyboardButton("🍿Кинопремьеры", callback_data='premiers')],
                 [InlineKeyboardButton("🎲Рандом", callback_data='random')]
                 ]
-
+    text = "<strong>ГЛАВНОЕ МЕНЮ</strong>\n" \
+           "Самое важное место нашего бота\n" \
+           "Здесь начинается ваше погружение в МИР КИНО\n" \
+           "Найди любимого актёра, проверь режиссёра,\n" \
+           "Найди фильм в любимом жанре и многое другое!\n" \
+           "<strong>Начинай!</strong>"
     reply_markup = InlineKeyboardMarkup(keyboard)
     if 'message_type' not in context.user_data:
         context.user_data['message_type'] = ' '
     if context.user_data['message_type'] != 'text':
         context.user_data['message_type'] = 'text'
-        text = "<strong>ГЛАВНОЕ МЕНЮ</strong>\n" \
-               "Самое важное место нашего бота\n" \
-               "Здесь начинается ваше погружение в МИР КИНО\n" \
-               "Найди любимого актёра, проверь режиссёра,\n" \
-               "Найди фильм в любимом жанре и многое другое!\n" \
-               "<strong>Начинай!</strong>"
         context.user_data['message'] = await context.bot.send_message(text=text,
                                                                       chat_id=context.user_data['chat_id'],
                                                                       reply_markup=reply_markup,
@@ -346,6 +345,7 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
     if not my_response:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
         edit = 'random' in url
+        print(ok)
         status = await check_ok(context, ok, response, url, edit=edit)
         if not status:
             return 0
@@ -436,7 +436,7 @@ def parser_film(response):
             if persons['Актеры']:
                 persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
     text = f"<strong>{year if year else ''}</strong>" \
-           f"<strong>{time}</strong>\n<strong>{name}</strong> " \
+           f" <strong>{time}</strong>\n<strong>{name}</strong> " \
            f"{f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''}" \
            f"<strong> {str(age_rate) + '+' if age_rate else ''}</strong>\n" \
            f"<strong>Жанр:</strong> {genre}\n" \
@@ -526,6 +526,7 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
             c += 1
         query_data1.append(1)
     keyboard = []
+    if len(context.user_data['films_by_enter']) == 0: await check_ok(context, 'False', {}, '')
     markup_data = context.user_data['films_by_enter'][int(query_data1[-1])]
     for i in range(0, len(markup_data), 2):
         keyboard.append([InlineKeyboardButton(name[:21], callback_data=f'psearch_by_name~{name[:20]}') for name in
