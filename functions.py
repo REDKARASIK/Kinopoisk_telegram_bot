@@ -23,7 +23,8 @@ async def bot_help(update, context):
     keyboard = [[InlineKeyboardButton('🚩В главное меню', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message'] = await context.bot.send_message(
-        text='Благодаря нашему боту Ваше общение с киноиндустрией станет гораздо приятнее.\nОперативный поиск фильмов и многой информации для них.\nБудем рады Вам!',
+        text='Благодаря нашему боту Ваше общение с киноиндустрией станет гораздо приятнее.\n'
+             'Оперативный поиск фильмов и многой информации для них.\nБудем рады Вам!',
         chat_id=context.user_data['chat_id'], reply_markup=markup)
 
 
@@ -342,7 +343,8 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
                  InlineKeyboardButton('💥Факты', callback_data=f'fact.{id_film}'),
                  InlineKeyboardButton('❗️Ошибки', callback_data=f'blooper.{id_film}')]]
     keyboard.insert(0, [InlineKeyboardButton('🎲Рандом',
-                                             callback_data='random')] if url == 'https://api.kinopoisk.dev/v1/movie/random' else [
+                                             callback_data='random')] if url == 'https://api.kinopoisk.dev/v1'
+                                                                                '/movie/random' else [
         InlineKeyboardButton('🔄Другое название', callback_data='search_by_name')])
 
     keyboard[0] = [InlineKeyboardButton('🎞Трейлер', url=url_trailer)] + keyboard[0] if url_trailer else keyboard[0]
