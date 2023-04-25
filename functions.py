@@ -110,6 +110,8 @@ async def button(update, context):
             await cabinet(query, context)
         if query.data == 'donation':
             await donation(query, context)
+        if query.data == 'contacts':
+            await contacts(query, context)
         if query.data.split('.')[0] == 'watch_later':
             await watch_later(query, context)
         if query.data.split('.')[0] == 'print_films_by_person':
@@ -192,6 +194,17 @@ async def donation(query, context):
             reply_markup=markup)
 
 
+async def contacts(query, context):
+    markup = InlineKeyboardMarkup([[InlineKeyboardButton('🔙Назад', callback_data='my_cabinet')]])
+    context.user_data['message'] = await context.bot.edit_message_text(chat_id=context.user_data['chat_id'],
+                                                                       reply_markup=markup,
+                                                                       message_id=context.user_data[
+                                                                           'message'].message_id,
+                                                                       text='Наши контакты:\n'
+                                                                            'Генерал Карась: @depressedsion\n'
+                                                                            'Maver: @maver_05')
+
+
 async def watch_later(query, context):
     query_data = query.data.split('.')
     if query_data[1] == '0':
@@ -254,7 +267,8 @@ async def cabinet(query, context):
     keyboard = [
         [InlineKeyboardButton('➕Посмотреть позже', callback_data='watch_later.0'),
          InlineKeyboardButton('✔️Уже смотрел', callback_data='watch_later.1')],
-        [InlineKeyboardButton('Поддержать авторов', callback_data='donation')],
+        [InlineKeyboardButton('Поддержать авторов', callback_data='donation'),
+         InlineKeyboardButton('Контакты', callback_data='contacts')],
         [InlineKeyboardButton('🔙Назад', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
     if context.user_data['message_type'] == 'text':
