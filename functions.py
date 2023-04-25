@@ -20,6 +20,12 @@ logger = logging.getLogger(__name__)
 
 
 async def bot_help(update, context):
+    if 'chat_id' not in context.user_data:
+        context.user_data['chat_id'] = update.message.chat_id
+        context.user_data['username'] = update.message.from_user.username
+        context.user_data['id'] = update.message.from_user.id
+        print(register_user(context.user_data['id'], context.user_data['username']))
+    context.user_data['message_type'] = 'text'
     keyboard = [[InlineKeyboardButton('🚩В главное меню', callback_data='start')]]
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message'] = await context.bot.send_message(
