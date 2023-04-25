@@ -24,8 +24,9 @@ async def bot_help(update, context):
     markup = InlineKeyboardMarkup(keyboard)
     context.user_data['message'] = await context.bot.send_message(
         text='Благодаря нашему боту Ваше общение с киноиндустрией станет гораздо приятнее.\n'
-             'Оперативный поиск фильмов и многой информации для них.\nБудем рады Вам!',
-        chat_id=context.user_data['chat_id'], reply_markup=markup)
+             'Оперативный поиск фильмов и многой информации для них.\nБудем рады Вам!'
+             '<strong>НАЖМИТЕ или НАПИШИТЕ /start, если что-то не работает!',
+        chat_id=context.user_data['chat_id'], reply_markup=markup, parse_mode=types.ParseMode.HTML)
 
 
 async def start(update, context):
@@ -46,19 +47,23 @@ async def start(update, context):
         context.user_data['message_type'] = ' '
     if context.user_data['message_type'] != 'text':
         context.user_data['message_type'] = 'text'
-        context.user_data['message'] = await context.bot.send_message(text=
-                                                                      "Добро пожаловать в стартовое меню бота.\n"
-                                                                      "Здесь вы можете найти нужную вам функцию.",
+        text = "<strong>ГЛАВНОЕ МЕНЮ</strong>\n" \
+               "Самое важное место нашего бота\n" \
+               "Здесь начинается ваше погружение в МИР КИНО\n" \
+               "Найди любимого актёра, проверь режиссёра,\n" \
+               "Найди фильм в любимом жанре и многое другое!\n" \
+               "<strong>Начинай!</strong>"
+        context.user_data['message'] = await context.bot.send_message(text=text,
                                                                       chat_id=context.user_data['chat_id'],
-                                                                      reply_markup=reply_markup)
+                                                                      reply_markup=reply_markup,
+                                                                      parse_mode=types.ParseMode.HTML)
     else:
-        context.user_data['message'] = await context.bot.edit_message_text(text=
-                                                                           "Добро пожаловать в стартовое меню бота.\n"
-                                                                           "Здесь вы можете найти нужную вам функцию.",
+        context.user_data['message'] = await context.bot.edit_message_text(text=text,
                                                                            message_id=context.user_data[
                                                                                'message'].message_id,
                                                                            chat_id=context.user_data['chat_id'],
-                                                                           reply_markup=reply_markup)
+                                                                           reply_markup=reply_markup,
+                                                                           parse_mode=types.ParseMode.HTML)
 
 
 async def button(update, context):
