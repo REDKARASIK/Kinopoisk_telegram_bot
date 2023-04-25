@@ -41,7 +41,8 @@ async def start(update, context):
                 ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    if 'message_type' not in context.user_data: context.user_data['message_type'] = ' '
+    if 'message_type' not in context.user_data:
+        context.user_data['message_type'] = ' '
     if context.user_data['message_type'] != 'text':
         context.user_data['message_type'] = 'text'
         context.user_data['message'] = await context.bot.send_message(text=
@@ -318,9 +319,10 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
                                 data='name'):
     if not my_response:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY}, params=params)
-        edit = True if 'random' in url else False
+        edit = 'random' in url
         status = await check_ok(context, ok, response, url, edit=edit)
-        if not status: return 0
+        if not status:
+            return 0
         if list_of_films:
             context.user_data['list_of_films'], context.user_data['names_of_films'] = get_data_list_of_films(response)
             context.user_data['key'] = data
@@ -380,6 +382,9 @@ def parser_film(response):
     video = response.get('videos', '')
     trailer = video.get('trailers', '') if video else ''
     url_trailer = trailer[0].get('url', '') if trailer else ''
+    lengthFilm = response.get('movieLength', 0)
+    lengthFilm = 0 if lengthFilm is None else lengthFilm
+    h, m = int(lengthFilm) // 60, int(lengthFilm) % 60
     watchability = response['watchability']['items']
     sources = {}
     if watchability:
@@ -393,17 +398,23 @@ def parser_film(response):
                 if len(v): persons_text += f"<strong>{k}</strong>: {', '.join(v)}\n"
     else:
         if persons:
-            if persons['Режиссеры']: persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
-            if persons['Актеры']: persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
-    text = f"<strong>{year if year else ''}</strong>\n<strong>{name}</strong>" \
+            if persons['Режиссеры']:
+                persons_text += f"<strong>Режиссёры</strong>: {', '.join(persons['Режиссеры'])}\n"
+            if persons['Актеры']:
+                persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
+    text = f"<strong>{year if year else ''}</strong>" \
+           f"\n<strong>{name}</strong>" \
+           f"{str(h).rjust(2, '0')}:{str(m).rjust(2, '0')}</strong>\n" \
            f" {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} " \
-           f"<strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
+           f"<strong>{str(age_rate) + '+' if age_rate else ''}</strong><strong>\n" \
            f"<strong>жанр:</strong> {genre}\n" \
-           f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n<strong>Кинопоиск</strong>: {rate_kp}\n" \
+           f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n" \
+           f"<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
     text += description if len(text + description) <= 1024 else short_description if (
             short_description and len(text + short_description) <= 1024) else ''
-    while len(text) > 1024: text = '\n'.join(text.split('\n')[:-1])
+    while len(text) > 1024:
+        text = '\n'.join(text.split('\n')[:-1])
     return text, poster, url_trailer, sources, id_film, name
 
 
@@ -458,7 +469,8 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
     if len(query_data1) == 1:
         response, ok = await get_response(url, headers={'X-API-KEY': API_KEY_2}, params=params)
         status = await check_ok(context, ok, response, url)
-        if not status: return 0
+        if not status:
+            return 0
         id = response['items'][0]['kinopoiskId']
         img = response['items'][0]['posterUrl']
         context.user_data['photo'] = img
@@ -466,7 +478,8 @@ async def print_films_by_person(context, query_data, url, params=None, headers=N
         url = 'https://kinopoiskapiunofficial.tech/api/v1/staff/' + str(id)
         response, ok = await get_response(url, headers=headers)
         status = await check_ok(context, ok, response, url)
-        if not status: return 0
+        if not status:
+            return 0
         names = []
         for item in response['films']:
             if item['professionKey'] == keys[key][1]:
@@ -651,7 +664,10 @@ def get_status(film_id, chat_id):
     watched = get_all_watched(chat_id)
     watched = watched[0][0].split(',') if watched[0][0] else []
     later = get_all_later(chat_id)
-    later = later[0][0].split(',') if later[0][0] else []
+    if later[0][0]:
+        later = later[0][0].split(',')
+    else:
+        later = []
     keyboard[0] = InlineKeyboardButton('✔️Посмотреть позже',
                                        callback_data=f'add_to_want_films.{film_id}') if str(film_id) not in later \
         else InlineKeyboardButton(
