@@ -348,8 +348,6 @@ async def universal_search_film(context, url, params=None, dlt=False, list_of_fi
         context.user_data['message'] = await context.bot.send_photo(chat_id, img['url'], caption=text,
                                                                     reply_markup=markup,
                                                                     parse_mode=types.ParseMode.HTML)
-        markup = context.user_data['message'].reply_markup
-        inline_keyboard = list(map(lambda x: list(x), list(markup.inline_keyboard)))
         context.user_data['message_type'] = 'media'
         context.user_data['deleting_id'] = context.user_data['message'].message_id
     else:
