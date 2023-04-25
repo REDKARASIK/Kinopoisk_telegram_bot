@@ -412,8 +412,10 @@ def parser_film(response):
     lengthFilm = response.get('movieLength', 0)
     lengthFilm = 0 if lengthFilm is None else lengthFilm
     h, m = int(lengthFilm) // 60, int(lengthFilm) % 60
-    h = str(h).rjust(2, '0')
-    m = str(m).rjust(2, '0')
+    h = str(h) + ' ч' if h else ''
+    m = str(m) + ' мин' if m else ''
+    time = ' '.join([h, m])
+    time = time if time != ' ' else ''
     if h == '00' and m == '00':
         h = m = ''
     watchability = response['watchability']['items']
@@ -434,11 +436,10 @@ def parser_film(response):
             if persons['Актеры']:
                 persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
     text = f"<strong>{year if year else ''}</strong>" \
-           f"\n<strong>{name}</strong> " \
-           f"<strong>{h}:{m}</strong>\n" \
-           f" {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} " \
-           f"<strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
-           f"<strong>жанр:</strong> {genre}\n" \
+           f"<strong>{time}</strong>\n<strong>{name}</strong> " \
+           f"{f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''}" \
+           f"<strong> {str(age_rate) + '+' if age_rate else ''}</strong>\n" \
+           f"<strong>Жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n" \
            f"<strong>Кинопоиск</strong>: {rate_kp}\n" \
            f"{persons_text}\n"
