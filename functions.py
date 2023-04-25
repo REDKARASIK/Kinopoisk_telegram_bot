@@ -398,6 +398,10 @@ def parser_film(response):
     lengthFilm = response.get('movieLength', 0)
     lengthFilm = 0 if lengthFilm is None else lengthFilm
     h, m = int(lengthFilm) // 60, int(lengthFilm) % 60
+    h = str(h).rjust(2, '0')
+    m = str(m).rjust(2, '0')
+    if h == '00' and m == '00':
+        h = m = ''
     watchability = response['watchability']['items']
     sources = {}
     if watchability:
@@ -416,10 +420,10 @@ def parser_film(response):
             if persons['Актеры']:
                 persons_text += f"<strong>Актёры</strong>: {', '.join(persons['Актеры'])}\n"
     text = f"<strong>{year if year else ''}</strong>" \
-           f"\n<strong>{name}</strong>" \
-           f"{str(h).rjust(2, '0')}:{str(m).rjust(2, '0')}</strong>\n" \
+           f"\n<strong>{name}</strong> " \
+           f"<strong>{h}:{m}</strong>\n" \
            f" {f'(<strong>{alt_name}</strong>)' if alt_name is not None else ''} " \
-           f"<strong>{str(age_rate) + '+' if age_rate else ''}</strong><strong>\n" \
+           f"<strong>{str(age_rate) + '+' if age_rate else ''}</strong>\n" \
            f"<strong>жанр:</strong> {genre}\n" \
            f"<strong>IMDb:</strong> {rate_imdb if rate_imdb else '-'}\n" \
            f"<strong>Кинопоиск</strong>: {rate_kp}\n" \
